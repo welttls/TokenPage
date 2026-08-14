@@ -4,24 +4,37 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Token黄页 · 查模型价格</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Noto+Serif+SC:wght@600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="bg-glow"></div>
+  <div class="paper-grain"></div>
   <div class="app">
 
-    <header class="topbar">
-      <div class="brand">
-        <div class="logo">📖</div>
-        <div>
-          <h1>Token<span>黄页</span></h1>
-          <p class="tagline">查模型价格，上 Token 黄页 · 主流模型优惠情报 · 桌宠式比价</p>
+    <header class="masthead">
+      <div class="masthead-top">
+        <span class="mh-meta">TOKEN YELLOW PAGES · EST. 2026</span>
+        <span class="mh-meta" id="now">—</span>
+        <span class="mh-meta">VOL. 1 · NO. {{ version }}</span>
+      </div>
+      <div class="masthead-mid">
+        <div class="brand">
+          <div class="logo">☎</div>
+          <div class="brand-text">
+            <h1>Token<span>黄页</span></h1>
+            <p class="tagline">— 模型价格分类簿 · 主流渠道优惠情报 · 一册在手比价不愁 —</p>
+          </div>
+        </div>
+        <div class="masthead-ad">
+          <div class="ad-box">
+            <span class="ad-tag">本页广告位</span>
+            <span class="ad-line">查价格 · 上黄页</span>
+          </div>
         </div>
       </div>
-      <div class="topbar-meta">
-        <span class="pill subtle" id="now">—</span>
-        <span class="pill subtle">v{{ version }}</span>
-      </div>
+      <div class="masthead-rule"><i></i><b>MODEL PRICE DIRECTORY &amp; BARGAIN BULLETIN</b><i></i></div>
     </header>
 
     <section class="statusbar" id="statusbar">
@@ -29,25 +42,32 @@
         <span class="status-label">数据时间</span>
         <span class="status-value" id="dataTime">—</span>
       </div>
-      <div class="status-item providers" id="providers"></div>
       <div class="status-item">
-        <span class="status-label">峰谷</span>
+        <span class="status-label">收录渠道</span>
+        <div class="providers" id="providers"></div>
+      </div>
+      <div class="status-item">
+        <span class="status-label">峰谷电价</span>
         <span class="status-value" id="offpeak">—</span>
       </div>
       <button class="btn-refresh" id="btnRefresh">↻ 刷新价格</button>
+      <button class="btn-force" id="btnForce" style="display:none" title="冷却期内强制重新抓取（10 分钟一次）">⚡ 强制刷新</button>
     </section>
 
     <main>
       <section class="panel">
         <div class="panel-head">
-          <h2>模型 × 路线 比价矩阵</h2>
+          <h2><span class="h2-mark">§</span> 模型 × 路线 比价分类栏</h2>
           <div class="tabs">
             <button class="tab active" data-tab="matrix">比价矩阵</button>
             <button class="tab" data-tab="diff">涨跌情报</button>
             <button class="tab" data-tab="deals">限时折扣</button>
           </div>
           <div class="matrix-ctrl">
-            <button class="btn-small" id="btnAlpha" title="模型族按首字母排序">🔤 按字母排序</button>
+            <button class="btn-small" id="btnCny" title="切换美元/人民币主显">$ 美元</button>
+            <button class="btn-small" id="btnAlpha" title="模型族按字母排序：A→Z / Z→A 一键切换">🔤 A→Z</button>
+            <button class="btn-small" id="btnAlphaReset" title="恢复默认顺序" style="display:none">↩</button>
+            <button class="btn-small" id="btnCollapseAll" title="一键收起/展开全部模型族">▸ 全部收起</button>
           </div>
           <span class="hint">点击族头折叠/展开 · ⠿ 拖拽排序 · 📌 置顶 · 悬停看说明</span>
         </div>
@@ -58,7 +78,8 @@
     </main>
 
     <footer class="footer">
-      <span>100% 本地 · 数据存 <code>~/.tokenpage/prices.db</code> · 仅保留最近 2 天 · 零上传零上报</span>
+      <div class="footer-rule">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</div>
+      <span>本簿免费 · 价目每日一印，隔两日作废重排 · 抄自各家公开价目，一翻便知哪家划算</span>
     </footer>
   </div>
 

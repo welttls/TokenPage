@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS prices (
 );
 CREATE INDEX IF NOT EXISTS idx_latest ON prices(provider, model_id, fetched_at);
 CREATE INDEX IF NOT EXISTS idx_fetched ON prices(fetched_at);
+CREATE TABLE IF NOT EXISTS meta (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
 """
 
 _COLS = (
@@ -135,6 +139,30 @@ def latest_fetched_at() -> str | None:
     try:
         row = conn.execute("SELECT MAX(fetched_at) FROM prices").fetchone()
         return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def get_meta(key: str, default: str | None = None) -> str | None:
+    """读取 meta 键值表（如上次强制刷新时间）。"""
+    conn = get_conn()
+    try:
+        row = conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        return row[0] if row else default
+    finally:
+        conn.close()
+
+
+def set_meta(key: str, value: str) -> None:
+    """写入 meta 键值表（存在则覆盖）。"""
+    conn = get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO meta(key, value) VALUES(?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value),
+        )
+        conn.commit()
     finally:
         conn.close()
 

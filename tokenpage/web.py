@@ -17,21 +17,37 @@ from tokenpage.fetchers.openrouter_discount import _is_in_go_list
 from tokenpage.pricing import apply_offpeak, offpeak_status
 from tokenpage.recommender import recommend
 from tokenpage.storage import (
+    get_meta,
     latest_deals,
     latest_fetched_at,
     latest_quotes,
     price_diffs,
     save_quotes,
+    set_meta,
 )
 
 app = Flask(__name__)
 
 # 抓取冷却：默认 24 小时内不再全量爬取（返回缓存）
 FETCH_COOLDOWN_SECONDS = 24 * 3600
+# 强制刷新冷却：force=1 强刷后的最短间隔（防高频爬取被上游判定为攻击）
+FORCE_COOLDOWN_SECONDS = 600
 
 
 def _fmt_price(v: float | None) -> float | None:
     return None if v is None else round(v, 4)
+
+
+def _cooldown_remaining(last_iso: str | None, seconds: int) -> int:
+    """返回距下次可执行（抓取/强刷）的剩余秒数；无记录或解析失败返回 0 = 可执行。"""
+    if not last_iso:
+        return 0
+    try:
+        last_dt = datetime.fromisoformat(last_iso)
+        elapsed = (datetime.now(timezone.utc) - last_dt).total_seconds()
+        return max(0, int(seconds - elapsed))
+    except ValueError:
+        return 0
 
 
 def _route_json(r) -> dict:
@@ -71,7 +87,11 @@ def _matrix_json() -> list[dict]:
                 "family": fv.family,
                 "family_label": fv.family_label,
                 "models": [
-                    {"model_id": mv.model_id, "routes": [_route_json(r) for r in mv.routes]}
+                    {
+                        "model_id": mv.model_id,
+                        "family": fv.family,
+                        "routes": [_route_json(r) for r in mv.routes],
+                    }
                     for mv in fv.models
                 ],
             }
@@ -137,6 +157,14 @@ def api_overview():
         {
             "fetched_at": fetched_at,
             "has_data": fetched_at is not None,
+            "fetch_cooldown_seconds": FETCH_COOLDOWN_SECONDS,
+            "fetch_cooldown_remaining": _cooldown_remaining(
+                fetched_at, FETCH_COOLDOWN_SECONDS
+            ),
+            "force_cooldown_seconds": FORCE_COOLDOWN_SECONDS,
+            "force_cooldown_remaining": _cooldown_remaining(
+                get_meta("last_force_fetch_at"), FORCE_COOLDOWN_SECONDS
+            ),
             "fx": load_fx(),
             "provider_meta": provider_meta(),
             "providers": _providers_status(),
@@ -181,25 +209,41 @@ def api_fetch():
     ensure_config()
     force = request.args.get("force") == "1"
     last = latest_fetched_at()
-    # 冷却：默认 24h 内不重复全量爬取（除非 force=1）
-    if last and not force:
-        try:
-            last_dt = datetime.fromisoformat(last)
-            if (datetime.now(timezone.utc) - last_dt).total_seconds() < FETCH_COOLDOWN_SECONDS:
-                return jsonify(
-                    {
-                        "ok": True,
-                        "skipped": True,
-                        "reason": "cooldown",
-                        "cooldown_seconds": FETCH_COOLDOWN_SECONDS,
-                        "fetched_at": last,
-                        "counts": {},
-                        "errors": {},
-                        "saved": 0,
-                    }
-                )
-        except ValueError:
-            pass
+    last_force = get_meta("last_force_fetch_at")
+
+    # 冷却：force=1 走独立的强刷冷却（防高频爬取被上游判定攻击）；否则走普通 24h 冷却
+    if force:
+        fr = _cooldown_remaining(last_force, FORCE_COOLDOWN_SECONDS)
+        if fr > 0:
+            return jsonify(
+                {
+                    "ok": True,
+                    "skipped": True,
+                    "reason": "force_cooldown",
+                    "force_cooldown_seconds": FORCE_COOLDOWN_SECONDS,
+                    "force_cooldown_remaining": fr,
+                    "fetched_at": last,
+                    "counts": {},
+                    "errors": {},
+                    "saved": 0,
+                }
+            )
+    else:
+        cr = _cooldown_remaining(last, FETCH_COOLDOWN_SECONDS)
+        if cr > 0:
+            return jsonify(
+                {
+                    "ok": True,
+                    "skipped": True,
+                    "reason": "cooldown",
+                    "cooldown_seconds": FETCH_COOLDOWN_SECONDS,
+                    "cooldown_remaining": cr,
+                    "fetched_at": last,
+                    "counts": {},
+                    "errors": {},
+                    "saved": 0,
+                }
+            )
 
     results, errors = fetch_all()
     batch_ts = datetime.now(timezone.utc).isoformat()
@@ -211,6 +255,8 @@ def api_fetch():
             quotes.append(q)
     if quotes:
         save_quotes(quotes)
+    if force:
+        set_meta("last_force_fetch_at", batch_ts)
     return jsonify(
         {
             "ok": True,

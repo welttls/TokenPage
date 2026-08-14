@@ -2,6 +2,24 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
+## v0.3.1（2026-08-15）
+
+### 新增
+- **强刷独立限流**：`/api/fetch?force=1` 增加独立 10 分钟冷却（`FORCE_COOLDOWN_SECONDS`），防止高频爬取被上游判定为攻击
+- **刷新冷却倒计时**：冷却期（24h）内刷新按钮禁用并显示「⏳ 冷却 h:mm:ss」倒计时；冷却期出现受控「⚡ 强制刷新」入口（自身受 10 分钟冷却约束）
+- **字母排序一键切换**：字母按钮改单按钮双向切换「🔤 A→Z ⇄ Z→A」，首击进入 A→Z，再击切换方向；新增「↩」恢复默认顺序按钮（拖拽族头同样恢复并同步按钮状态）
+- **/api/overview 下发冷却字段**：`fetch_cooldown_seconds` / `fetch_cooldown_remaining` / `force_cooldown_seconds` / `force_cooldown_remaining`
+
+### 优化
+- 后端 `_cooldown_remaining()` 统一计算冷却剩余秒数；`storage` 新增 `meta` 键值表记录上次强刷时间
+- README 增加远期目标：发布页静态化 / 接口分离（本机抓取生成静态快照，访客只读快照不触发爬取）
+
+### 修复
+- 刷新按钮禁用态 cursor 由 wait 改为 not-allowed
+- 拖拽排序后字母排序按钮状态同步（此前未刷新按钮文案/高亮）
+
+---
+
 ## v0.3.0（2026-08-15）
 
 ### 新增
