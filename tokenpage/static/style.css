@@ -342,8 +342,8 @@ html, body {
 }
 /* 限时折扣标签浮窗放宽宽度，避免长说明被压成细长条 */
 .deal-tags .tip::after { max-width: min(420px, calc(100vw - 32px)); }
-/* 路线浮窗内容较长，靠右展示避免遮挡 */
-.route .tip::after { left: auto; right: 0; transform: none; }
+/* 路线浮窗从路线元素向右展开（路线列在行最左，避免居中遮挡与向左跑偏） */
+.route .tip::after { left: 0; transform: none; }
 .tip:hover::after { opacity: 1; }
 
 /* ================= 族卡片：折叠 / 置顶 / 拖拽 ================= */
