@@ -78,14 +78,18 @@ function esc(s) {
 
 function fmtNum(v) {
   if (v == null) return "—";
-  // 保留最多 4 位小数，再经 Number 去掉小数尾零（¥20 → "20"，¥6.50 → "6.5"）
-  return String(Number(Number(v).toFixed(4)));
+  // 两位小数；极小值避免显示 0，保留三位（如 ¥0.007）
+  const s = Number(Number(v).toFixed(2));
+  if (s === 0 && v > 0) return String(Number(Number(v).toFixed(3)));
+  return String(s);
 }
 
 function fmtPrice(v) {
   if (v == null) return "—";
   if (v <= 0) return "🆓 免费";
-  return v >= 0.005 ? `$${v.toFixed(2)}` : `$${v.toFixed(3)}`;
+  // 两位小数；极小值避免显示 $0.00，保留三位（如 $0.004）
+  const s = v.toFixed(2);
+  return s === "0.00" ? `$${v.toFixed(3)}` : `$${s}`;
 }
 
 function badge(provider) {
@@ -145,31 +149,34 @@ function renderTags(tags) {
     .join(" ");
 }
 
-// 单个价格格：折扣原价划掉 + 美元/人民币双显（切换主显币种，另一种小字随行）
+// 单个价格格：人民币/美元互斥显示（按钮切换），折扣行划线原价同币种折算
 function priceCell(r, kind) {
   const usd = r[kind];
   const list = kind === "prompt" ? r.list_prompt : kind === "completion" ? r.list_completion : null;
   const raw = kind === "prompt" ? r.raw_prompt : kind === "completion" ? r.raw_completion : null;
   const rate = currentFx && currentFx.CNY_per_USD;
-  // 人民币小字：CNY 来源用原始人民币价，其余按汇率折算
-  let cnyVal = null;
-  if (r.currency === "CNY" && raw != null) cnyVal = raw;
-  else if (usd != null && usd > 0 && rate) cnyVal = usd * rate;
+  const isDeal = list != null && usd != null && Math.abs(list - usd) > 1e-9;
 
-  let html;
-  if (usd != null && usd <= 0) {
-    html = "🆓 免费";
-  } else if (uiState.cny && cnyVal != null) {
-    // 人民币主显，美元小字
-    html = `¥${fmtNum(cnyVal)} <small class="usd">${fmtPrice(usd)}</small>`;
-  } else {
-    html = fmtPrice(usd);
-    if (cnyVal != null) html += ` <small class="cny">¥${fmtNum(cnyVal)}</small>`;
+  // 当前币种值：人民币主显时 CNY 来源用原始人民币价，其余按汇率折算；美元主显直接用 usd
+  let val = null;
+  if (usd != null && usd > 0) {
+    val = uiState.cny
+      ? (r.currency === "CNY" && raw != null ? raw : rate ? usd * rate : null)
+      : usd;
   }
-  if (list != null && usd != null && Math.abs(list - usd) > 1e-9) {
-    html = `<s class="list">${fmtPrice(list)}</s> ${html}`;
+  const main = usd == null ? "—" : usd <= 0 ? "🆓 免费" : (uiState.cny ? `¥${fmtNum(val)}` : fmtPrice(usd));
+
+  if (!isDeal) return main;
+
+  // 折扣行：划线原价按当前币种折算
+  let lval = null;
+  if (list != null) {
+    lval = uiState.cny
+      ? (r.currency === "CNY" ? list : rate ? list * rate : null)
+      : list;
   }
-  return html;
+  const listMain = lval != null ? (uiState.cny ? `¥${fmtNum(lval)}` : fmtPrice(lval)) : "";
+  return `<s class="list">${listMain}</s> ${main}`;
 }
 
 // 路线浮窗文案：渠道说明 + 官方API/额度折算/折扣说明 + 官网
@@ -267,7 +274,7 @@ function renderDeals(deals) {
     })
     .join("");
   el.innerHTML = `
-    <div class="deal-summary">🎁 共 ${deals.length} 个 OpenRouter 限时折扣（非编程清单；编程清单折扣已并入比价矩阵）</div>
+    <div class="deal-summary">🎁 共 ${deals.length} 个 OpenRouter 限时折扣（Go 清单折扣已并入比价矩阵，此处不再重复）</div>
     <div class="deal-head"><span>折扣</span><span>模型</span><span>族</span><span style="text-align:right">输入 / 输出</span><span>标签</span></div>
     ${rows}`;
 }

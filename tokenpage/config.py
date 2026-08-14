@@ -221,7 +221,7 @@ def provider_meta() -> dict[str, dict]:
         },
         "openrouter_deals": {
             "url": "https://openrouter.ai/models?discount=true",
-            "note": "OpenRouter 限时折扣（前端端点抓取，折扣后价）。仅非编程清单的折扣模型在此展示。",
+            "note": "OpenRouter 限时折扣（前端端点抓取，折扣后价）。仅非 Go 清单的折扣模型在此展示。",
             "route_type": "metered",
         },
         "siliconflow": {

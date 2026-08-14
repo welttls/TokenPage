@@ -14,7 +14,7 @@ from tokenpage import __version__
 from tokenpage.config import ensure_config, load_fx, provider_labels, provider_meta
 from tokenpage.fetchers import fetch_all
 from tokenpage.fetchers.openrouter_discount import _is_in_go_list
-from tokenpage.pricing import apply_offpeak, offpeak_status
+from tokenpage.pricing import apply_offpeak, apply_offpeak_live, offpeak_status
 from tokenpage.recommender import recommend
 from tokenpage.storage import (
     get_meta,
@@ -80,6 +80,11 @@ def _route_json(r) -> dict:
 def _matrix_json() -> list[dict]:
     rows = latest_quotes()
     views = recommend(rows)
+    # 读取时按当前时刻实时应用峰谷（DeepSeek 官方价随峰/谷自动折算、排序）
+    for fv in views:
+        for mv in fv.models:
+            for r in mv.routes:
+                apply_offpeak_live(r)
     out = []
     for fv in views:
         out.append(

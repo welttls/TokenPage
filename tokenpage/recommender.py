@@ -236,8 +236,9 @@ def _merge_deal_into_openrouter(routes: list[RouteQuote], deal: RouteQuote) -> N
     or_idx = next((i for i, r in enumerate(routes) if r.provider == "openrouter"), None)
     if or_idx is not None:
         or_r = routes[or_idx]
-        or_r.list_prompt = or_r.prompt
-        or_r.list_completion = or_r.completion
+        # 划线原价优先用折扣反推的原价（raw_*），无则回退 openrouter 列表价
+        or_r.list_prompt = deal.raw_prompt or or_r.prompt
+        or_r.list_completion = deal.raw_completion or or_r.completion
         or_r.prompt = deal.prompt
         or_r.completion = deal.completion
         if deal.cache_read is not None:

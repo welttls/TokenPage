@@ -66,7 +66,6 @@ def fetch() -> list[PriceQuote]:
             continue
 
         pct = round(discount * 100)
-        in_go = _is_in_go_list(slug)
         family = _guess_family(slug)
         # raw_* 存「原价」（折扣前），供并入矩阵时显示原价划掉/浮窗
         raw_prompt = _undo_discount(prompt, discount) if prompt else None
@@ -90,7 +89,7 @@ def fetch() -> list[PriceQuote]:
                 raw_prompt=round(raw_prompt, 6) if raw_prompt else None,
                 raw_completion=round(raw_completion, 6) if raw_completion else None,
                 discount_type="promo",
-                deal_tag=f"🎁{pct}%off" + ("·编程" if in_go else ""),
+                deal_tag=f"🎁{pct}%off",
             )
         )
     return quotes

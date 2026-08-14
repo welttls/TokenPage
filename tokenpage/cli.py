@@ -21,7 +21,7 @@ from tokenpage import __version__
 from tokenpage.config import DATA_DIR, ensure_config, load_rules, provider_labels
 from tokenpage.fetchers import fetch_all
 from tokenpage.output import console, dump_json, print_deals, print_matrix
-from tokenpage.pricing import apply_offpeak, offpeak_status
+from tokenpage.pricing import apply_offpeak, apply_offpeak_live, offpeak_status
 from tokenpage.recommender import recommend
 from tokenpage.storage import (
     latest_deals,
@@ -77,6 +77,11 @@ def _rows() -> list[dict]:
 def cmd_show(args) -> int:
     rows = _rows()
     views = recommend(rows)
+    # 展示时按当前时刻实时应用峰谷
+    for fv in views:
+        for mv in fv.models:
+            for r in mv.routes:
+                apply_offpeak_live(r)
     if args.json:
         # Windows GBK 终端下强制 UTF-8 输出，避免中文/emoji 编码错误
         try:

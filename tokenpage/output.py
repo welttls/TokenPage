@@ -112,12 +112,12 @@ def print_deals(rows: list[dict]) -> None:
 
 def _deal_sort(r: dict) -> tuple:
     tag = r.get("deal_tag") or ""
-    # 折扣越大的排前面；编程模型优先
-    return (0 if "编程" in tag else 1, -(int(r.get("prompt_usd") or 0) * 100))
+    # 折扣越大的排前面
+    return -(int(r.get("prompt_usd") or 0) * 100)
 
 
 def _deal_pct(tag: str | None) -> str:
-    """从 deal_tag（🎁65%off·编程）提取折扣百分比显示。"""
+    """从 deal_tag（🎁65%off）提取折扣百分比显示。"""
     if not tag:
         return "—"
     import re

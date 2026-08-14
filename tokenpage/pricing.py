@@ -80,3 +80,30 @@ def apply_offpeak(quote, now_utc: datetime | None = None):
         if quote.cache_write_usd_per_1m is not None:
             quote.cache_write_usd_per_1m = round(quote.cache_write_usd_per_1m * mult, 6)
     return quote
+
+
+def apply_offpeak_live(route, now_utc: datetime | None = None):
+    """比价展示时按「当前时刻」实时应用峰谷（route 为 recommender.RouteQuote）。
+
+    以 raw_prompt / raw_completion（原始基准价）为准重新折算有效价，
+    避免对抓取时已应用过折扣的有效价重复乘折扣；无峰谷规则的
+    provider 只同步 is_offpeak 状态后跳过。
+    """
+    off, mult = offpeak_status(route.provider, now_utc)
+    route.is_offpeak = off
+    if mult is None or route.raw_prompt is None:
+        return route
+    base_p = route.raw_prompt
+    base_c = route.raw_completion
+    if off:
+        route.discount_type = "offpeak"
+        if base_p is not None:
+            route.prompt = round(base_p * mult, 6)
+        if base_c is not None:
+            route.completion = round(base_c * mult, 6)
+    else:
+        if base_p is not None:
+            route.prompt = round(base_p, 6)
+        if base_c is not None:
+            route.completion = round(base_c, 6)
+    return route

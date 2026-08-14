@@ -329,8 +329,8 @@ html, body {
 .tip { position: relative; cursor: help; display: inline-block; }
 .tip::after {
   content: attr(data-tip);
-  position: absolute; bottom: calc(100% + 8px); left: 0;
-  transform: none;
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
   background: var(--ink); color: var(--panel);
   border: 1px solid var(--line-dark);
   padding: 8px 10px; border-radius: 4px; font-size: 12px; font-weight: 400;
@@ -340,10 +340,10 @@ html, body {
   transition: opacity .12s ease; line-height: 1.5;
   box-shadow: 3px 3px 0 rgba(120, 96, 40, .4);
 }
-/* 靠右的列（标签/ZDR）浮窗改从右侧弹出，避免超出视口右缘 */
-.tags .tip::after, .deal-tags .tip::after { left: auto; right: 0; }
 /* 限时折扣标签浮窗放宽宽度，避免长说明被压成细长条 */
 .deal-tags .tip::after { max-width: min(420px, calc(100vw - 32px)); }
+/* 路线浮窗内容较长，靠右展示避免遮挡 */
+.route .tip::after { left: auto; right: 0; transform: none; }
 .tip:hover::after { opacity: 1; }
 
 /* ================= 族卡片：折叠 / 置顶 / 拖拽 ================= */
