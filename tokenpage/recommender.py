@@ -61,7 +61,7 @@ class RouteQuote:
                 tags.append(qtag)
         if self.deal_tag:
             tags.append(self.deal_tag)
-        if self.zdr:
+        if self.zdr and self.zdr.tag and self.zdr.tag != "—":
             tags.append(self.zdr.tag)
         if self.tiered:
             tags.append("阶梯")

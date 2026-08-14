@@ -2,6 +2,13 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
+## v0.3.8（2026-08-15）
+
+### 修复
+- ZDR 无有效信息（`retention_days` 为 None）时不再显示 `—` 占位标签，修复 minimax-m2.5 等模型出现横杠的问题（`price_tags`/`discount_tags` 过滤无效 ZDR 标签）
+
+---
+
 ## v0.3.7（2026-08-15）
 
 ### 修复

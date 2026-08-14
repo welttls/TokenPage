@@ -116,7 +116,7 @@ class PriceQuote:
             tags.append(f"额度×{self.quota.effective_multiplier:g}")
         if self.deal_tag:
             tags.append(self.deal_tag)
-        if self.zdr:
+        if self.zdr and self.zdr.tag and self.zdr.tag != "—":
             tags.append(self.zdr.tag)
         return tags
 
