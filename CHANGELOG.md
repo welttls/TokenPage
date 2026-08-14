@@ -2,6 +2,14 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
+## v0.3.9（2026-08-15，待提交）
+
+### 修复
+- 浮窗被卡片边缘/边框遮挡：`.family-card` 的 `overflow:hidden` 改为 `overflow:visible`，保证多标签（如 qwen3.7-plus 的「阶梯」）浮窗能溢出卡片完整显示、盖住边界线（z-index:50 生效）
+- 路线浮窗恢复居中：移除 `.route .tip::after` 覆盖规则，路线浮窗与标签浮窗一致水平居中（`left:50% + translateX(-50%)`），靠 `overflow:visible` 保证最上层不被遮挡
+
+---
+
 ## v0.3.8（2026-08-15）
 
 ### 修复
