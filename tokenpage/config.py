@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("TOKENPAGE_HOME", Path.home() / ".tokenpage"))
@@ -155,7 +156,12 @@ def _load(name: str, default: dict) -> dict:
         return default
     try:
         return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception as e:
+        # 用户改配置写坏语法时明确提示，避免静默回退默认值难排查
+        print(
+            f"[tokenpage] 警告：{p} 解析失败（{e}），已回退内置默认值，请检查 JSON 语法",
+            file=sys.stderr,
+        )
         return default
 
 

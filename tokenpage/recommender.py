@@ -186,7 +186,12 @@ def recommend(rows: list[dict]) -> list[FamilyView]:
             deal = deals.pop(lm, None)
             if deal:
                 _merge_deal_into_openrouter(routes, deal)
-            routes.sort(key=lambda r: ROUTE_ORDER.index(r.provider) if r.provider in ROUTE_ORDER else 99)
+            routes.sort(
+                key=lambda r: (
+                    ROUTE_ORDER.index(r.provider) if r.provider in ROUTE_ORDER else 99,
+                    r.provider,
+                )
+            )
             mv_list.append(
                 ModelView(model_id=lm, family=fam, family_label=labels.get(fam, fam), routes=routes)
             )
@@ -232,15 +237,20 @@ def _merge_deal_into_openrouter(routes: list[RouteQuote], deal: RouteQuote) -> N
 
     - 有 openrouter 列表价：折扣后价覆盖，原价存 list_prompt/completion。
     - 无列表价：把折扣路由伪装成 openrouter 展示，原价取 raw_*。
+    - 折扣价缺失（None）时不覆盖已有有效价。
     """
     or_idx = next((i for i, r in enumerate(routes) if r.provider == "openrouter"), None)
     if or_idx is not None:
         or_r = routes[or_idx]
-        # 划线原价优先用折扣反推的原价（raw_*），无则回退 openrouter 列表价
-        or_r.list_prompt = deal.raw_prompt or or_r.prompt
-        or_r.list_completion = deal.raw_completion or or_r.completion
-        or_r.prompt = deal.prompt
-        or_r.completion = deal.completion
+        # 划线原价优先用折扣反推的原价（raw_*），无则回退 openrouter 当前价
+        or_r.list_prompt = deal.raw_prompt if deal.raw_prompt is not None else or_r.prompt
+        or_r.list_completion = (
+            deal.raw_completion if deal.raw_completion is not None else or_r.completion
+        )
+        if deal.prompt is not None:
+            or_r.prompt = deal.prompt
+        if deal.completion is not None:
+            or_r.completion = deal.completion
         if deal.cache_read is not None:
             or_r.cache_read = deal.cache_read
         or_r.deal_tag = deal.deal_tag
@@ -250,8 +260,10 @@ def _merge_deal_into_openrouter(routes: list[RouteQuote], deal: RouteQuote) -> N
     # 无列表价路由：折扣本身作为 OpenRouter 报价展示
     deal.provider = "openrouter"
     deal.provider_label = provider_labels().get("openrouter", "OpenRouter")
-    deal.list_prompt = deal.raw_prompt or deal.prompt
-    deal.list_completion = deal.raw_completion or deal.completion
+    deal.list_prompt = deal.raw_prompt if deal.raw_prompt is not None else deal.prompt
+    deal.list_completion = (
+        deal.raw_completion if deal.raw_completion is not None else deal.completion
+    )
     deal.is_openrouter_deal = True
     deal.source_url = (provider_meta().get("openrouter") or {}).get("url")
     routes.append(deal)
@@ -272,7 +284,12 @@ def _logical_name(row: dict, models_map: dict) -> str:
                 reverse[sid] = lm
     provider = row["provider"]
     mid = row["model_id"]
-    # opencode_go / opencode_zen / official 用模型 ID 本身就是逻辑名
-    if provider in ("opencode_go", "opencode_zen", "official") or mid in station_map:
+    # opencode_go / opencode_zen / 官方直连（route_type=official，provider 为
+    # anthropic/openai/... 等厂商名）的模型 ID 本身就是逻辑名
+    if (
+        provider in ("opencode_go", "opencode_zen")
+        or row.get("route_type") == "official"
+        or mid in station_map
+    ):
         return mid
     return reverse.get(mid, mid)

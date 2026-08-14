@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 
 import requests
@@ -19,6 +20,8 @@ from bs4 import BeautifulSoup
 
 from tokenpage.config import load_go, provider_labels
 from tokenpage.models import PriceQuote, QuotaInfo, ROUTE_SUBSCRIPTION, ZdrInfo
+
+log = logging.getLogger("tokenpage")
 
 DOC_URL = "https://opencode.ai/docs/zh-cn/go/"
 # 营销页（有「限时 2x usage」横幅，docs 表不包含）
@@ -118,6 +121,10 @@ def fetch() -> list[PriceQuote]:
             if name and mid:
                 name_to_id[name] = mid
     if not name_to_id:
+        log.warning(
+            "OpenCode Go 文档解析异常：未找到模型清单表（tables=%d），页面结构可能已变化",
+            len(tables),
+        )
         return []
 
     # ---- 限时额度促销（2x usage）：config 兜底 + 营销页自动抓取覆盖 ----
@@ -162,6 +169,8 @@ def fetch() -> list[PriceQuote]:
                 "used_for_training": False if "不" in used or "no" in used.lower() else None,
                 "retention_days": days,
             }
+    else:
+        log.warning("OpenCode Go 文档解析异常：未找到 ZDR 表（tables=%d）", len(tables))
 
     # ---- 合并价格行（处理阶梯价格）----
     merged: dict[str, dict] = {}
@@ -182,11 +191,17 @@ def fetch() -> list[PriceQuote]:
             merged[name] = {**row, "tiered": False}
 
     quotes: list[PriceQuote] = []
+    skipped_names: list[str] = []
+    missing_zdr: list[str] = []
     for name, row in merged.items():
         mid = name_to_id.get(name)
         if not mid:
+            skipped_names.append(name)
             continue
-        zdr = zdr_rows.get(name, {})
+        zdr = zdr_rows.get(name)
+        if zdr is None:
+            missing_zdr.append(name)
+            zdr = {}
         base_quota_usd = row["quota"]
         promo_entry = promo.get(mid)
         if promo_entry:
@@ -235,6 +250,10 @@ def fetch() -> list[PriceQuote]:
         if row["prompt"] == 0 or (row["quota"] and row["quota"] >= base_quota * 10):
             quote.deal_tag = "🆓限免"
         quotes.append(quote)
+    if skipped_names:
+        log.warning("OpenCode Go 价格表行无法映射到模型清单，已跳过：%s", "、".join(skipped_names))
+    if missing_zdr:
+        log.warning("OpenCode Go ZDR 表缺少以下模型（阶梯名合并后未匹配）：%s", "、".join(missing_zdr))
     return quotes
 
 

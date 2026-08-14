@@ -49,6 +49,12 @@ def fetch() -> list[PriceQuote]:
         cache_write = cache_write_per_token * 1_000_000 if cache_write_per_token > 0 else None
         params = set(m.get("supported_parameters") or [])
         lm, fam = meta[mid]
+        # top_provider 为对象；兼容未来字段形态（tiered 布尔或字符串）
+        tp = m.get("top_provider")
+        if isinstance(tp, dict):
+            tiered = bool(tp.get("tiered")) or None
+        else:
+            tiered = (tp == "tiered") or None
         quotes.append(
             PriceQuote(
                 provider="openrouter",
@@ -61,7 +67,7 @@ def fetch() -> list[PriceQuote]:
                 completion_usd_per_1m=round(completion, 6),
                 cache_read_usd_per_1m=round(cache_read, 6) if cache_read else None,
                 cache_write_usd_per_1m=round(cache_write, 6) if cache_write else None,
-                tiered=m.get("top_provider") == "tiered" or None,
+                tiered=tiered,
                 context_length=m.get("context_length"),
                 supports_tools="tools" in params,
                 currency="USD",

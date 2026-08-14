@@ -38,7 +38,8 @@
 - **比价矩阵交互**：模型族折叠/展开、拖拽排序、📌 置顶、「🔤 A→Z / Z→A」一键切换 + ↩ 恢复默认（localStorage 持久化）
 - **悬浮说明**：标签解释、路线官网、官方 API 说明、额度折算/折扣浮窗
 - **每天一次抓取**：24h 冷却，冷却期刷新按钮禁用并显示倒计时；强制刷新受独立 10 分钟冷却限流（防高频爬取被上游判定攻击）
-- **100% 本地**：所有数据存 `~/.tokenpage/prices.db`，零上传、零上报
+- **抓取失败兜底**：单站抓取失败时沿用上一批快照（比价矩阵不缺行、涨跌情报不误报「下架」）
+- **100% 本地**：所有数据存 `~/.tokenpage/prices.db`，零上传、零上报；Web 界面无外部 CDN/字体，离线可用
 
 ## 安装
 
@@ -58,6 +59,7 @@ tokenpage deals     # 查看 OpenRouter 限时折扣（--json 纯输出）
 tokenpage diff      # 对比最近两次抓取，标记降价/涨价/新上架/下架
 tokenpage rules     # 查看峰谷规则与当前谷/峰状态
 tokenpage web       # 启动本地 Web 版界面（浏览器查看）
+tokenpage web --host 0.0.0.0 --readonly   # 公开部署：只读模式，访客不触发抓取
 ```
 
 或用模块方式：`python -m tokenpage show`
@@ -95,8 +97,30 @@ $ tokenpage show
 
 - 所有价格数据、配置规则仅存储于本地 SQLite
 - 零网络上传；价格抓取通过你的网络直连聚合站公开页面
-- 零用户行为追踪
+- 零用户行为追踪；Web 界面无外部 CDN/字体/分析脚本
 - ZDR 信息来自 OpenCode Go 隐私表及各站声明，仅作展示参考
+
+## Web 安全与公开部署
+
+Web 版默认只监听 `127.0.0.1`，面向本机使用。若要发布到公网/局域网：
+
+```bash
+# 只读模式（推荐）：访客只读快照，绝不触发爬取（--host 非回环地址时自动启用）
+tokenpage web --host 0.0.0.0 --readonly
+
+# 公网域名需显式加入 Host 白名单（防 DNS Rebinding）
+TOKENPAGE_ALLOWED_HOSTS=your.domain.com tokenpage web --host 0.0.0.0 --readonly
+```
+
+内置防护：
+
+- **只读模式**：`--readonly` / `TOKENPAGE_READONLY=1`；监听非回环地址时默认开启（`TOKENPAGE_READONLY=0` 显式关闭），此时 `/api/fetch` 返回 403
+- **Host 白名单**：回环/内网地址放行，公网域名须配置 `TOKENPAGE_ALLOWED_HOSTS`（逗号分隔）
+- **CSRF 防护**：POST 校验 `Sec-Fetch-Site` / `Origin`，跨站请求无法触发抓取
+- **XSS 防护**：前端所有第三方数据（模型名/厂商名）HTML 转义 + CSP 响应头（脚本仅同源、禁内联）
+- **冷却防竞态**：强刷「检查+占位」原子化，并发请求无法绕过 10 分钟冷却
+
+> 长期方案见路线图「发布页静态化」：本机定时抓取 → 生成静态快照托管，Web 服务只读快照。注意 Flask 自带开发服务器不适合直接暴露公网，正式发布建议前置反向代理（nginx/caddy）或使用静态快照方案。
 
 ## 路线图
 

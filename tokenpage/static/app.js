@@ -6,17 +6,13 @@ const FAMILY_EMOJI = {
   grok: "🛰️", minimax: "🔮", mimo: "🧬", hy3: "🧪",
 };
 
-// 模型族 → 官方商标。两类来源：
-//  - 本地 SVG（static/icons/，已下载到本地，离线可用）：openai/zhipu/hunyuan/kimi
-//  - Simple Icons CDN（cdn.simpleicons.org）：claude/qwen/deepseek/minimax/x
-// 加载失败时自动回退到 FAMILY_EMOJI
+// 模型族 → 官方商标（全部本地 SVG，static/icons/，无外部 CDN，离线可用）。
+// 加载失败时由下方捕获阶段的 error 监听自动回退到 FAMILY_EMOJI。
 const FAMILY_LOCAL_ICON = {
   gpt: "openai",
   glm: "zhipu",
   hy3: "hunyuan",
   kimi: "kimi",
-};
-const FAMILY_BRAND = {
   claude: "claude",
   qwen: "qwen",
   deepseek: "deepseek",
@@ -24,20 +20,31 @@ const FAMILY_BRAND = {
   grok: "x",
 };
 
-// 品牌图标：<img> 加载失败时替换为 emoji，保证离线/无 CDN 时也有图标
+// 品牌图标：<img> 加载失败时替换为 emoji（捕获阶段监听，兼容 CSP 禁内联事件）
 function brandIcon(family, cls) {
   const emoji = FAMILY_EMOJI[family] || "🧩";
   const local = FAMILY_LOCAL_ICON[family];
-  const slug = FAMILY_BRAND[family];
-  const src = local ? `/static/icons/${local}.svg` : slug ? `https://cdn.simpleicons.org/${slug}` : null;
-  if (!src) return `<span class="${cls}">${emoji}</span>`;
+  if (!local) return `<span class="${cls}">${emoji}</span>`;
   return (
     `<span class="${cls}">` +
-    `<img src="${src}" alt="" loading="lazy" ` +
-    `onerror="this.outerHTML='${emoji}'">` +
+    `<img src="/static/icons/${local}.svg" alt="" loading="lazy" data-emoji="${emoji}">` +
     `</span>`
   );
 }
+
+// error 事件不冒泡但可捕获：图标加载失败 → 原位替换为 emoji
+document.addEventListener(
+  "error",
+  (e) => {
+    const t = e.target;
+    if (t && t.tagName === "IMG" && t.dataset.emoji) {
+      const span = document.createElement("span");
+      span.textContent = t.dataset.emoji;
+      t.replaceWith(span);
+    }
+  },
+  true
+);
 
 const ROUTE_CLASS = {
   opencode_go: "opencode_go",
@@ -67,6 +74,7 @@ let dragFam = null;
 let cooldownRemaining = 0;      // 普通刷新冷却剩余
 let forceCooldownRemaining = 0; // 强制刷新冷却剩余
 let cooldownTimer = null;
+let readonlyMode = false;       // 只读模式（公开部署）：服务端禁用 /api/fetch
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -78,18 +86,23 @@ function esc(s) {
 
 function fmtNum(v) {
   if (v == null) return "—";
-  // 两位小数；极小值避免显示 0，保留三位（如 ¥0.007）
-  const s = Number(Number(v).toFixed(2));
-  if (s === 0 && v > 0) return String(Number(Number(v).toFixed(3)));
-  return String(s);
+  // 逐步提高精度，避免极小价（如 ¥0.007）被舍成 0
+  for (const d of [2, 3, 4]) {
+    const s = v.toFixed(d);
+    if (Number(s) > 0) return String(Number(s));
+  }
+  return String(Number(v.toPrecision(6)));
 }
 
 function fmtPrice(v) {
   if (v == null) return "—";
   if (v <= 0) return "🆓 免费";
-  // 两位小数；极小值避免显示 $0.00，保留三位（如 $0.004）
-  const s = v.toFixed(2);
-  return s === "0.00" ? `$${v.toFixed(3)}` : `$${s}`;
+  // 逐步提高精度，避免极小价（如 $0.004）显示成 $0.00
+  for (const d of [2, 3, 4, 6]) {
+    const s = v.toFixed(d);
+    if (Number(s) > 0) return `$${s}`;
+  }
+  return `$${v.toExponential(2)}`;
 }
 
 function badge(provider) {
@@ -203,7 +216,7 @@ function renderProviders(providers) {
     box.innerHTML = `<span class="status-value">（暂无数据，请先刷新）</span>`;
     return;
   }  box.innerHTML = Object.values(providers)
-    .map((p) => `<span class="badge ${badge(p.provider)}">${p.label} · ${p.count}</span>`)
+    .map((p) => `<span class="badge ${badge(esc(p.provider))}">${esc(p.label)} · ${Number(p.count) || 0}</span>`)
     .join("");
 }
 
@@ -216,7 +229,7 @@ function renderOffpeak(rules) {
   el.innerHTML = rules
     .map((r) => {
       const mark = r.is_offpeak === true ? "🌙 谷时（折扣生效）" : r.is_offpeak === false ? "☀️ 峰时（原价）" : "—";
-      return `<span class="status-value">${r.provider_label}: ${mark}</span>`;
+      return `<span class="status-value">${esc(r.provider_label)}: ${mark}</span>`;
     })
     .join(" · ");
 }
@@ -239,7 +252,7 @@ function renderDiffs(diffs) {
       const cls = c.action === "down" ? "down" : c.action === "up" ? "up" : c.action === "new" ? "new" : "gone";
       const pf = c.prompt_from == null ? "—" : `$${c.prompt_from}`;
       const pt = c.prompt_to == null ? "—" : `$${c.prompt_to}`;
-      return `<div class="diff-row ${cls}"><span class="diff-mark">${mark}</span> ${c.family || ""} ${c.model_id} <span class="diff-prov">${c.provider_label || c.provider}</span> 输入 ${pf}→${pt}</div>`;
+      return `<div class="diff-row ${cls}"><span class="diff-mark">${mark}</span> ${esc(c.family || "")} <code>${esc(c.model_id)}</code> <span class="diff-prov">${esc(c.provider_label || c.provider || "")}</span> 输入 ${pf}→${pt}</div>`;
     })
     .join("");
   el.innerHTML = `
@@ -341,7 +354,7 @@ function modelBlockHTML(mv) {
 
 function routeRowHTML(r) {
   const t = routeTooltip(r);
-  const prov = `<span class="badge ${badge(r.provider)}">${r.provider_label}</span>`;
+  const prov = `<span class="badge ${badge(r.provider)}">${esc(r.provider_label)}</span>`;
   const routeCell = tip(prov, t)
     + (r.source_url ? ` <a class="src" href="${esc(r.source_url)}" target="_blank" rel="noreferrer" title="${esc(r.source_url)}">🔗</a>` : "");
   return `
@@ -360,7 +373,9 @@ function renderMatrix(matrix) {
   syncCollapseAllBtn();
   const box = $("#matrixPanel");
   if (!matrix || matrix.length === 0) {
-    box.innerHTML = `<div class="empty"><span class="big">🗂️</span>暂无价格数据。<br>点击右上角「刷新价格」开始抓取。</div>`;
+    box.innerHTML = readonlyMode
+      ? `<div class="empty"><span class="big">🗂️</span>暂无价格数据。<br>服务端尚未抓取，请等待管理员执行 tokenpage fetch。</div>`
+      : `<div class="empty"><span class="big">🗂️</span>暂无价格数据。<br>点击右上角「刷新价格」开始抓取。</div>`;
     return;
   }
   const sorted = sortFamilies(matrix);
@@ -506,9 +521,10 @@ async function loadOverview() {
   const data = await res.json();
   currentProviderMeta = data.provider_meta || {};
   currentFx = data.fx || null;
+  readonlyMode = !!data.readonly;
   cooldownRemaining = Math.max(0, Number(data.fetch_cooldown_remaining) || 0);
   forceCooldownRemaining = Math.max(0, Number(data.force_cooldown_remaining) || 0);
-  $("#dataTime").textContent = data.has_data ? (data.fetched_at || "—") : "（无数据）";
+  $("#dataTime").textContent = data.has_data ? (data.fetched_at || "—") : (readonlyMode ? "（无数据）" : "（无数据，请点击「刷新价格」）");
   renderProviders(data.providers);
   renderOffpeak(data.rules);
   renderMatrix(data.matrix);
@@ -529,10 +545,17 @@ function fmtDur(s) {
 }
 
 // 依据冷却剩余秒同步刷新按钮：冷却期禁用主按钮并显示倒计时；强刷入口受独立冷却约束
+// 只读模式（公开部署）下隐藏全部抓取入口——访客绝不触发爬取
 function syncRefreshButtons() {
   const main = $("#btnRefresh");
   const force = $("#btnForce");
   if (!main) return;
+  if (readonlyMode) {
+    main.style.display = "none";
+    if (force) force.style.display = "none";
+    return;
+  }
+  main.style.display = "";
   if (cooldownRemaining > 0) {
     main.disabled = true;
     main.textContent = `⏳ 冷却 ${fmtDur(cooldownRemaining)}`;
@@ -569,6 +592,7 @@ function startCooldownTimer() {
 }
 
 async function refreshPrices() {
+  if (readonlyMode) return;
   const btn = $("#btnRefresh");
   btn.disabled = true;
   btn.textContent = "抓取中…";
@@ -591,6 +615,7 @@ async function refreshPrices() {
 
 // 强制刷新（受后端独立强刷冷却约束）
 async function forceRefresh() {
+  if (readonlyMode) return;
   const btn = $("#btnForce");
   btn.disabled = true;
   btn.textContent = "强制抓取中…";

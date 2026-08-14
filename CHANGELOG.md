@@ -2,7 +2,35 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
-## v0.3.9（2026-08-15，待提交）
+## v0.3.10（2026-08-15）
+
+### 安全（面向公开部署）
+- **XSS 修复**：涨跌情报/收录渠道/峰谷状态/路线徽章等所有第三方数据（模型名、厂商名）前端 HTML 转义（`esc()`），OpenRouter 折扣 slug 等不可信数据不再直接拼 `innerHTML`；新增 CSP 等安全响应头（脚本仅同源、禁内联、`X-Content-Type-Options`、`Referrer-Policy`）
+- **只读模式（发布网站）**：`--readonly` / `TOKENPAGE_READONLY=1` 禁用 `/api/fetch`，访客绝不触发爬取；`--host` 非回环地址时默认开启（`TOKENPAGE_READONLY=0` 显式关闭），前端隐藏抓取按钮
+- **Host 白名单**：回环/内网 IP 放行，公网域名须配置 `TOKENPAGE_ALLOWED_HOSTS`（防 DNS Rebinding）
+- **CSRF 防护**：POST 校验 `Sec-Fetch-Site` / `Origin`，恶意网页无法跨站触发抓取
+- **强刷竞态**：强刷冷却「检查+占位」加锁原子化，并发请求无法绕过 10 分钟冷却高频爬取
+- **资源全本地化**：移除 Google Fonts 与 simpleicons CDN，品牌图标全部本地 SVG（新增 claude/qwen/deepseek/minimax/x），兑现「100% 本地、无外部依赖」承诺
+
+### 修复
+- **失败站兜底**：单站抓取失败时沿用上一批快照（`storage.carry_forward_providers`），比价矩阵不缺行、涨跌情报不再误报「下架」；CLI/Web 共用 `tokenpage/sync.py` 抓取入库流程
+- **峰谷涨跌误报**：涨跌对比对有峰谷规则的 provider 改用 `raw_*` 基准价归一化，两次抓取分别落在峰/谷时段不再误报涨价/降价
+- **实时峰谷缓存价**：`apply_offpeak_live` 补齐 cache_read/cache_write 的峰/谷重算（此前只重算输入/输出价）；`raw_prompt` 缺失不再导致输出价漏算
+- **tiered 判定**：OpenRouter `top_provider` 为对象，此前 `== "tiered"` 恒 False，改为读对象字段
+- **硅基流动精确匹配**：模型名加词边界（`(?<![\w.-])...(?![\w.-])`），`GLM-5.2` 不再误命中 `GLM-5.25` 等更长型号
+- **CLI 折扣排序**：`deals` 按折扣力度降序（与注释意图一致，此前误按输入价排）
+- **折扣并入守卫**：折扣价缺失（None/0）时不再覆盖矩阵已有有效价；划线原价显式判 None（免费模型 0 价不再误回退）
+- **极小价显示**：Web/前端价格精度提高至 6 位，等效价 $0.00003 不再显示为「免费」
+
+### 优化
+- OpenCode Go/Zen 文档表格解析异常（结构变化、行无法映射、ZDR 缺失）输出 warning 日志，不再静默丢数据
+- 配置文件 JSON 语法错误时输出明确警告（此前静默回退默认值）
+- 汇率自动更新不再覆盖 `fx.json` 用户自写的 `note`
+- 路线排序对同优先级 provider 加稳定次级键；`_logical_name` 死分支修正（官方直连按 `route_type=official` 判断）
+
+---
+
+## v0.3.9（2026-08-15）
 
 ### 修复
 - 浮窗被卡片边缘/边框遮挡：`.family-card` 的 `overflow:hidden` 改为 `overflow:visible`，保证多标签（如 qwen3.7-plus 的「阶梯」）浮窗能溢出卡片完整显示、盖住边界线（z-index:50 生效）

@@ -48,7 +48,8 @@ def fetch_all() -> tuple[dict[str, list], dict[str, str]]:
             from tokenpage.config import load_fx, save_fx
 
             cur = load_fx()
-            cur.update(fx_refresh)
+            # 只更新数值与元数据字段，保留用户自写的 note
+            cur.update({k: v for k, v in fx_refresh.items() if k != "note"})
             save_fx(cur)
     except Exception as e:  # noqa: BLE001
         errors["fx"] = f"{type(e).__name__}: {e}"

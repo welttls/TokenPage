@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import datetime, timezone
 
@@ -19,17 +20,16 @@ from rich.console import Console
 
 from tokenpage import __version__
 from tokenpage.config import DATA_DIR, ensure_config, load_rules, provider_labels
-from tokenpage.fetchers import fetch_all
 from tokenpage.output import console, dump_json, print_deals, print_matrix
-from tokenpage.pricing import apply_offpeak, apply_offpeak_live, offpeak_status
+from tokenpage.pricing import apply_offpeak_live, offpeak_status
 from tokenpage.recommender import recommend
 from tokenpage.storage import (
     latest_deals,
     latest_fetched_at,
     latest_quotes,
     price_diffs,
-    save_quotes,
 )
+from tokenpage.sync import fetch_and_save
 
 
 def cmd_init(_args) -> int:
@@ -41,28 +41,24 @@ def cmd_init(_args) -> int:
 def cmd_fetch(_args) -> int:
     ensure_config()
     console.print("抓取中…（OpenRouter / 硅基流动 / OpenCode Go / OpenCode Zen / 官方）")
-    results, errors = fetch_all()
+    summary = fetch_and_save()
 
-    # 一批抓取共用同一时间戳，便于按「批次」查询最新快照
-    batch_ts = datetime.now(timezone.utc).isoformat()
-    quotes = []
-    for provider, qs in results.items():
-        for q in qs:
-            q.fetched_at = batch_ts
-            apply_offpeak(q)
-            quotes.append(q)
-        console.print(f"  [cyan]{provider_labels()[provider]}[/]: {len(qs)} 条")
-
+    for provider, n in summary["counts"].items():
+        console.print(f"  [cyan]{provider_labels().get(provider, provider)}[/]: {n} 条")
+    if summary["carried"]:
+        console.print(
+            f"  [yellow]⚠ {summary['carried']} 条沿用上一批快照（本次抓取失败的站）[/]"
+        )
+    errors = summary["errors"]
     if errors:
         for provider, msg in errors.items():
             console.print(f"  [yellow]⚠ {provider_labels().get(provider, provider)} 抓取失败[/]: {msg}")
 
-    if not quotes:
+    if not summary["saved"]:
         console.print("[red]✗ 没有抓到任何价格，请检查网络或配置。[/]")
         return 1
 
-    save_quotes(quotes)
-    console.print(f"[green]✓[/] 已入库 {len(quotes)} 条价格快照（仅保留最近 2 天）")
+    console.print(f"[green]✓[/] 已入库 {summary['saved']} 条价格快照（仅保留最近 2 天）")
     return 0
 
 
@@ -196,8 +192,21 @@ def cmd_web(args) -> int:
     except ImportError:
         console.print("[red]缺少 Flask，请先安装：pip install flask[/]")
         return 1
+    # 只读模式（公开部署防爬保护）：
+    # - --readonly / TOKENPAGE_READONLY=1 显式开启
+    # - 监听非回环地址时默认开启（TOKENPAGE_READONLY=0 显式关闭）
+    readonly = bool(args.readonly) or os.environ.get("TOKENPAGE_READONLY") == "1"
+    loopback = args.host in ("127.0.0.1", "localhost", "::1")
+    if not readonly and not loopback and os.environ.get("TOKENPAGE_READONLY") != "0":
+        readonly = True
+        console.print(
+            "[yellow]⚠ 监听非回环地址，已默认启用只读模式（禁用 /api/fetch，访客不触发爬取）。[/]\n"
+            "  公网部署请设置 TOKENPAGE_ALLOWED_HOSTS=你的域名；确需服务端开放抓取设 TOKENPAGE_READONLY=0。"
+        )
+    app.config["READONLY"] = readonly
+    mode = "只读模式" if readonly else "可抓取"
     console.print(
-        f"[green]Token黄页 Web 版[/] 已启动：http://{args.host}:{args.port}  （Ctrl+C 停止）"
+        f"[green]Token黄页 Web 版[/] 已启动：http://{args.host}:{args.port}  （{mode}，Ctrl+C 停止）"
     )
     app.run(host=args.host, port=args.port, debug=False)
     return 0
@@ -222,6 +231,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_web = sub.add_parser("web", help="启动 Web 版界面（浏览器查看）")
     p_web.add_argument("--host", default="127.0.0.1", help="监听地址（默认 127.0.0.1）")
     p_web.add_argument("--port", type=int, default=8765, help="监听端口（默认 8765）")
+    p_web.add_argument(
+        "--readonly",
+        action="store_true",
+        help="只读模式：禁用 /api/fetch（公开部署时访客绝不触发爬取）",
+    )
     return parser
 
 

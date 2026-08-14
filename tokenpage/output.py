@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 
 from rich.console import Console
@@ -111,17 +112,15 @@ def print_deals(rows: list[dict]) -> None:
 
 
 def _deal_sort(r: dict) -> tuple:
-    tag = r.get("deal_tag") or ""
-    # 折扣越大的排前面
-    return -(int(r.get("prompt_usd") or 0) * 100)
+    """折扣力度大的排前面（deal_tag 形如 🎁65%off）。"""
+    m = re.search(r"(\d+)%", r.get("deal_tag") or "")
+    return (-(int(m.group(1)) if m else 0), r.get("model_id") or "")
 
 
 def _deal_pct(tag: str | None) -> str:
     """从 deal_tag（🎁65%off）提取折扣百分比显示。"""
     if not tag:
         return "—"
-    import re
-
     m = re.search(r"(\d+)%", tag)
     return f"{m.group(1)}% off" if m else tag
 

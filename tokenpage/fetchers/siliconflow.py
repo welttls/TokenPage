@@ -25,11 +25,15 @@ def _sf_base_name(model_id: str) -> str:
 
 
 def _find_price(text: str, base: str) -> tuple[float, float] | None:
-    """在页面文本中定位「模型名 ... ¥输入 ¥输出」，返回 (输入, 输出) 人民币价。"""
-    idx = text.find(base)
-    if idx < 0:
+    """在页面文本中定位「模型名 ... ¥输入 ¥输出」，返回 (输入, 输出) 人民币价。
+
+    模型名加词边界（前后不能是字母/数字/./-），避免 GLM-5.2 误命中
+    GLM-5.25、GLM-5.2.5 这类更长型号的位置。
+    """
+    m = re.search(rf"(?<![\w.\-]){re.escape(base)}(?![\w.\-])", text)
+    if not m:
         return None
-    tail = text[idx : idx + 300]
+    tail = text[m.start() : m.start() + 300]
     nums = re.findall(r"¥\s*([\d.]+)", tail)
     if len(nums) >= 2:
         return float(nums[0]), float(nums[1])

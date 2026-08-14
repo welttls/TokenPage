@@ -7,6 +7,7 @@ Zen 是 OpenCode 团队的按量付费网关，模型含 Claude 闭源模型（G
 
 from __future__ import annotations
 
+import logging
 import re
 
 import requests
@@ -14,6 +15,8 @@ from bs4 import BeautifulSoup
 
 from tokenpage.config import logical_models, provider_labels
 from tokenpage.models import PriceQuote, ROUTE_METERED, ZdrInfo
+
+log = logging.getLogger("tokenpage")
 
 DOC_URL = "https://opencode.ai/docs/zh-cn/zen/"
 
@@ -51,6 +54,10 @@ def fetch() -> list[PriceQuote]:
     soup = BeautifulSoup(r.text, "html.parser")
     tables = soup.find_all("table")
     if len(tables) < 2:
+        log.warning(
+            "OpenCode Zen 文档解析异常：表格数量不足（tables=%d），页面结构可能已变化",
+            len(tables),
+        )
         return []
 
     # ---- table 0：展示名 -> 模型 ID ----

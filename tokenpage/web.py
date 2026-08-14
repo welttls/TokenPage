@@ -1,20 +1,30 @@
 """Web 版（Flask）：浏览器查看模型×路线比价矩阵、涨跌情报、峰谷状态与 ZDR。
 
-启动：tokenpage web [--host 127.0.0.1] [--port 8765]
-100% 本地：不依赖任何外部 CDN，纯本地渲染。
+启动：tokenpage web [--host 127.0.0.1] [--port 8765] [--readonly]
+100% 本地资源：无外部 CDN/字体，纯本地渲染。
+
+安全（面向「发布到公网」的场景）：
+- 只读模式：--readonly 或 TOKENPAGE_READONLY=1 时禁用 /api/fetch（访客绝不触发爬取）；
+  监听非回环地址时默认启用只读（TOKENPAGE_READONLY=0 可显式关闭）
+- Host 白名单：回环/内网地址 + TOKENPAGE_ALLOWED_HOSTS（公网域名），防 DNS Rebinding
+- POST 校验 Sec-Fetch-Site / Origin，防跨站触发抓取（CSRF）
+- CSP 等安全响应头：脚本仅限同源、禁内联脚本，配合前端转义防 XSS
 """
 
 from __future__ import annotations
 
+import ipaddress
+import os
+import threading
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 from flask import Flask, jsonify, render_template, request
 
 from tokenpage import __version__
 from tokenpage.config import ensure_config, load_fx, provider_labels, provider_meta
-from tokenpage.fetchers import fetch_all
 from tokenpage.fetchers.openrouter_discount import _is_in_go_list
-from tokenpage.pricing import apply_offpeak, apply_offpeak_live, offpeak_status
+from tokenpage.pricing import apply_offpeak_live, offpeak_status
 from tokenpage.recommender import recommend
 from tokenpage.storage import (
     get_meta,
@@ -22,20 +32,25 @@ from tokenpage.storage import (
     latest_fetched_at,
     latest_quotes,
     price_diffs,
-    save_quotes,
     set_meta,
 )
+from tokenpage.sync import fetch_and_save
 
 app = Flask(__name__)
+# 只读模式：环境变量先行，CLI 可覆盖（见 cli.cmd_web）
+app.config["READONLY"] = os.environ.get("TOKENPAGE_READONLY") == "1"
 
 # 抓取冷却：默认 24 小时内不再全量爬取（返回缓存）
 FETCH_COOLDOWN_SECONDS = 24 * 3600
 # 强制刷新冷却：force=1 强刷后的最短间隔（防高频爬取被上游判定为攻击）
 FORCE_COOLDOWN_SECONDS = 600
 
+# 抓取串行锁：防止并发请求同时通过冷却检查（配合 meta 先占位）
+_fetch_lock = threading.Lock()
+
 
 def _fmt_price(v: float | None) -> float | None:
-    return None if v is None else round(v, 4)
+    return None if v is None else round(v, 6)
 
 
 def _cooldown_remaining(last_iso: str | None, seconds: int) -> int:
@@ -48,6 +63,66 @@ def _cooldown_remaining(last_iso: str | None, seconds: int) -> int:
         return max(0, int(seconds - elapsed))
     except ValueError:
         return 0
+
+
+# ---------------- 请求防护（公网部署安全） ----------------
+
+
+def _allowed_hosts() -> set[str]:
+    """Host 白名单：回环 + 本机名 + TOKENPAGE_ALLOWED_HOSTS（逗号分隔，公网域名）。"""
+    hosts = {"localhost", "127.0.0.1", "::1", "[::1]"}
+    env = os.environ.get("TOKENPAGE_ALLOWED_HOSTS", "")
+    hosts.update(h.strip().lower() for h in env.split(",") if h.strip())
+    return hosts
+
+
+def _is_private_hostname(hostname: str) -> bool:
+    """内网 IP（RFC1918/回环/链路本地）放行，供 LAN 访问 --host 0.0.0.0 的场景。"""
+    try:
+        ip = ipaddress.ip_address(hostname)
+    except ValueError:
+        return False
+    return ip.is_private or ip.is_loopback or ip.is_link_local
+
+
+def _host_allowed(hostname: str) -> bool:
+    if not hostname:
+        return False
+    return hostname in _allowed_hosts() or _is_private_hostname(hostname)
+
+
+@app.before_request
+def _guard_request():
+    """Host 白名单（防 DNS Rebinding）+ POST 跨站校验（防 CSRF 触发抓取）。"""
+    hostname = (urlsplit("//" + (request.host or "")).hostname or "").lower()
+    if not _host_allowed(hostname):
+        return jsonify({"ok": False, "error": "host_not_allowed"}), 403
+    if request.method == "POST":
+        site = request.headers.get("Sec-Fetch-Site")
+        if site and site not in ("same-origin", "none"):
+            return jsonify({"ok": False, "error": "cross_site_blocked"}), 403
+        origin = request.headers.get("Origin")
+        if origin:
+            ohn = (urlsplit(origin).hostname or "").lower()
+            if not _host_allowed(ohn):
+                return jsonify({"ok": False, "error": "cross_origin_blocked"}), 403
+    return None
+
+
+@app.after_request
+def _security_headers(resp):
+    resp.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; connect-src 'self'; form-action 'self'; "
+        "frame-ancestors 'none'; base-uri 'self'",
+    )
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    return resp
+
+
+# ---------------- 数据序列化 ----------------
 
 
 def _route_json(r) -> dict:
@@ -158,13 +233,16 @@ def api_overview():
     labels = provider_labels()
     for c in diffs.get("changes", []):
         c["provider_label"] = labels.get(c.get("provider"), c.get("provider"))
+    # 冷却以 meta 记录为准（抓取前占位写入），老安装回退 prices 表时间
+    last_fetch = get_meta("last_fetch_at") or fetched_at
     return jsonify(
         {
             "fetched_at": fetched_at,
             "has_data": fetched_at is not None,
+            "readonly": bool(app.config.get("READONLY")),
             "fetch_cooldown_seconds": FETCH_COOLDOWN_SECONDS,
             "fetch_cooldown_remaining": _cooldown_remaining(
-                fetched_at, FETCH_COOLDOWN_SECONDS
+                last_fetch, FETCH_COOLDOWN_SECONDS
             ),
             "force_cooldown_seconds": FORCE_COOLDOWN_SECONDS,
             "force_cooldown_remaining": _cooldown_remaining(
@@ -211,29 +289,42 @@ def _deals_json() -> list[dict]:
 
 @app.post("/api/fetch")
 def api_fetch():
+    if app.config.get("READONLY"):
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "readonly",
+                    "message": "只读模式：访客不可触发抓取（公开部署防爬保护）",
+                }
+            ),
+            403,
+        )
     ensure_config()
     force = request.args.get("force") == "1"
-    last = latest_fetched_at()
-    last_force = get_meta("last_force_fetch_at")
+    now_ts = datetime.now(timezone.utc).isoformat()
 
-    # 冷却：force=1 走独立的强刷冷却（防高频爬取被上游判定攻击）；否则走普通 24h 冷却
     if force:
-        fr = _cooldown_remaining(last_force, FORCE_COOLDOWN_SECONDS)
-        if fr > 0:
-            return jsonify(
-                {
-                    "ok": True,
-                    "skipped": True,
-                    "reason": "force_cooldown",
-                    "force_cooldown_seconds": FORCE_COOLDOWN_SECONDS,
-                    "force_cooldown_remaining": fr,
-                    "fetched_at": last,
-                    "counts": {},
-                    "errors": {},
-                    "saved": 0,
-                }
-            )
+        # 强刷冷却：锁内「检查 + 立即占位」，防止并发/竞态绕过冷却高频爬取
+        with _fetch_lock:
+            fr = _cooldown_remaining(get_meta("last_force_fetch_at"), FORCE_COOLDOWN_SECONDS)
+            if fr > 0:
+                return jsonify(
+                    {
+                        "ok": True,
+                        "skipped": True,
+                        "reason": "force_cooldown",
+                        "force_cooldown_seconds": FORCE_COOLDOWN_SECONDS,
+                        "force_cooldown_remaining": fr,
+                        "fetched_at": latest_fetched_at(),
+                        "counts": {},
+                        "errors": {},
+                        "saved": 0,
+                    }
+                )
+            set_meta("last_force_fetch_at", now_ts)
     else:
+        last = get_meta("last_fetch_at") or latest_fetched_at()
         cr = _cooldown_remaining(last, FETCH_COOLDOWN_SECONDS)
         if cr > 0:
             return jsonify(
@@ -243,32 +334,22 @@ def api_fetch():
                     "reason": "cooldown",
                     "cooldown_seconds": FETCH_COOLDOWN_SECONDS,
                     "cooldown_remaining": cr,
-                    "fetched_at": last,
+                    "fetched_at": latest_fetched_at(),
                     "counts": {},
                     "errors": {},
                     "saved": 0,
                 }
             )
 
-    results, errors = fetch_all()
-    batch_ts = datetime.now(timezone.utc).isoformat()
-    quotes = []
-    for provider, qs in results.items():
-        for q in qs:
-            q.fetched_at = batch_ts
-            apply_offpeak(q)
-            quotes.append(q)
-    if quotes:
-        save_quotes(quotes)
-    if force:
-        set_meta("last_force_fetch_at", batch_ts)
+    summary = fetch_and_save()
     return jsonify(
         {
             "ok": True,
             "skipped": False,
-            "counts": {provider: len(qs) for provider, qs in results.items()},
-            "errors": errors,
-            "saved": len(quotes),
+            "counts": summary["counts"],
+            "errors": summary["errors"],
+            "saved": summary["saved"],
+            "carried": summary["carried"],
             "fetched_at": latest_fetched_at(),
         }
     )

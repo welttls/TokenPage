@@ -85,25 +85,29 @@ def apply_offpeak(quote, now_utc: datetime | None = None):
 def apply_offpeak_live(route, now_utc: datetime | None = None):
     """比价展示时按「当前时刻」实时应用峰谷（route 为 recommender.RouteQuote）。
 
-    以 raw_prompt / raw_completion（原始基准价）为准重新折算有效价，
-    避免对抓取时已应用过折扣的有效价重复乘折扣；无峰谷规则的
-    provider 只同步 is_offpeak 状态后跳过。
+    - prompt/completion 以 raw_*（原始基准价）为准重新折算，避免对抓取时
+      已应用过折扣的有效价重复乘折扣
+    - cache_read/cache_write 未存 raw 基准：若入库时应用过折扣（行内
+      is_offpeak=True），先除回基准价，再按当前时段重算
+    - 无峰谷规则的 provider 只同步 is_offpeak 状态后跳过
     """
     off, mult = offpeak_status(route.provider, now_utc)
+    was_off = route.is_offpeak  # 入库时是否谷时（DB 行状态）
     route.is_offpeak = off
-    if mult is None or route.raw_prompt is None:
+    if mult is None:
         return route
-    base_p = route.raw_prompt
-    base_c = route.raw_completion
+    if route.raw_prompt is not None:
+        route.prompt = round(route.raw_prompt * mult, 6) if off else round(route.raw_prompt, 6)
+    if route.raw_completion is not None:
+        route.completion = (
+            round(route.raw_completion * mult, 6) if off else round(route.raw_completion, 6)
+        )
+    for attr in ("cache_read", "cache_write"):
+        v = getattr(route, attr, None)
+        if v is None:
+            continue
+        base = v / mult if was_off is True else v
+        setattr(route, attr, round(base * mult, 6) if off else round(base, 6))
     if off:
         route.discount_type = "offpeak"
-        if base_p is not None:
-            route.prompt = round(base_p * mult, 6)
-        if base_c is not None:
-            route.completion = round(base_c * mult, 6)
-    else:
-        if base_p is not None:
-            route.prompt = round(base_p, 6)
-        if base_c is not None:
-            route.completion = round(base_c, 6)
     return route

@@ -24,7 +24,8 @@
   --blue-soft: rgba(46, 95, 138, .12);
   --purple: #7a4e8a;
   --purple-soft: rgba(122, 78, 138, .12);
-  --serif: "Zilla Slab", "Noto Serif SC", "Songti SC", "SimSun", serif;
+  /* 本地字体栈（无外部字体 CDN，离线可用；衬线系呈现黄页印刷感） */
+  --serif: "Zilla Slab", "Noto Serif SC", Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
   --mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace;
 }
 
