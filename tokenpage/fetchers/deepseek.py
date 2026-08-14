@@ -20,10 +20,6 @@ OFFICIAL_PRICING: dict[str, dict] = {
         "prompt": 1.32, "completion": 3.96,
         "context": 1_000_000, "tools": True, "family": "deepseek",
     },
-    "deepseek-chat": {  # V3.x 系列（近似 PEAK 档，占位）
-        "prompt": 0.44, "completion": 1.32,
-        "context": 163_840, "tools": True, "family": "deepseek",
-    },
 }
 
 

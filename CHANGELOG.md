@@ -2,6 +2,18 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
+## v0.3.3（2026-08-15）
+
+### 新增
+- **每日自动抓取汇率**：新增 `tokenpage/fetchers/fx.py`，随每次抓取顺带更新人民币兑美元汇率（免钥公开 API：`open.er-api.com` 主源 + `api.frankfurter.app` 回退），写回 `fx.json`，前端人民币换算与 SiliconFlow/官方 CNY 折算自动用最新汇率
+- `config.save_fx()` 写回 fx.json；`fetch_all()` 集成汇率更新（失败保留原值、计入 errors）
+
+### 修复
+- **移除 deepseek-chat**：删除 DeepSeek 官方内置表中的 `deepseek-chat`（V3.x 占位项）并清理 `prices.db` 历史数据，矩阵 DeepSeek 族仅保留 `deepseek-v4-flash` / `deepseek-v4-pro`
+- fx.json 历史 note 的 GBK 乱码随 save_fx（UTF-8）覆盖修复
+
+---
+
 ## v0.3.2（2026-08-15）
 
 ### 修复

@@ -171,6 +171,13 @@ def load_fx() -> dict:
     return _load("fx.json", DEFAULT_FX)
 
 
+def save_fx(fx: dict) -> None:
+    """写回 fx.json（如每日自动抓取的汇率）。"""
+    (DATA_DIR / "fx.json").write_text(
+        json.dumps(fx, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
 def load_go() -> dict:
     """加载 OpenCode Go 订阅配置。"""
     return _load("go.json", DEFAULT_GO)

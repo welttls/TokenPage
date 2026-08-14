@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from tokenpage.fetchers import (
     deepseek,
+    fx,
     official,
     opencode_go,
     opencode_zen,
@@ -40,4 +41,15 @@ def fetch_all() -> tuple[dict[str, list], dict[str, str]]:
             results[name] = fn()
         except Exception as e:  # noqa: BLE001 - 单站失败不中断
             errors[name] = f"{type(e).__name__}: {e}"
+    # 顺带刷新人民币兑美元汇率（写回 fx.json，失败保留原值）
+    try:
+        fx_refresh = fx.fetch_fx()
+        if fx_refresh:
+            from tokenpage.config import load_fx, save_fx
+
+            cur = load_fx()
+            cur.update(fx_refresh)
+            save_fx(cur)
+    except Exception as e:  # noqa: BLE001
+        errors["fx"] = f"{type(e).__name__}: {e}"
     return results, errors
