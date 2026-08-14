@@ -628,6 +628,12 @@ function setup() {
       $("#matrixPanel").style.display = tab === "matrix" ? "" : "none";
       $("#diffPanel").style.display = tab === "diff" ? "" : "none";
       $("#dealsPanel").style.display = tab === "deals" ? "" : "none";
+      // 矩阵控制（币种/字母排序/全部收起按钮 + 操作提示）仅比价矩阵页可见；
+      // 用 visibility 占位保持面板高度恒定，切换 Tab 时内容不跳
+      const ctrl = document.querySelector(".matrix-ctrl");
+      if (ctrl) ctrl.style.visibility = tab === "matrix" ? "visible" : "hidden";
+      const hint = document.querySelector(".hint");
+      if (hint) hint.style.visibility = tab === "matrix" ? "visible" : "hidden";
     });
   });
   setupMatrixEvents();
