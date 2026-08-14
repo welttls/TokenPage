@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tokenpage"
+version = "0.3.0"
+description = "Token黄页 — 主流模型价格优惠情报（桌宠式比价：聚合站/订阅/官方 API 矩阵 + 涨跌 + ZDR）"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "requests>=2.31",
+    "rich>=13.0",
+    "beautifulsoup4>=4.12",
+    "flask>=3.0",
+]
+
+[project.scripts]
+tokenpage = "tokenpage.cli:main"
+
+[tool.setuptools]
+packages = ["tokenpage", "tokenpage.fetchers"]

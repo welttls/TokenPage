@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 运行时数据（价格数据存于 ~/.tokenpage/，不入库）
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/

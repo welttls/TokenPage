@@ -1,0 +1,285 @@
+/* Token黄页 — 现代暗色主题 */
+:root {
+  --bg: #0b0f17;
+  --bg-soft: #0f1520;
+  --panel: #141b2a;
+  --panel-2: #182136;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #e6edf7;
+  --text-dim: #8b98ab;
+  --accent: #22d3ee;
+  --accent-2: #a78bfa;
+  --green: #34d399;
+  --orange: #fbbf24;
+  --red: #f87171;
+  --mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+}
+
+.bg-glow {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(600px 300px at 15% -10%, rgba(34, 211, 238, 0.14), transparent 60%),
+    radial-gradient(700px 400px at 90% 0%, rgba(167, 139, 250, 0.12), transparent 60%);
+}
+
+.app {
+  max-width: 1080px; margin: 0 auto; padding: 24px 20px 40px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+/* 顶栏 */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 14px; }
+.logo {
+  width: 46px; height: 46px; border-radius: 14px; font-size: 24px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, rgba(34,211,238,.18), rgba(167,139,250,.18));
+  border: 1px solid var(--border);
+}
+.brand h1 { font-size: 26px; letter-spacing: .5px; }
+.brand h1 span { color: var(--accent); }
+.tagline { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
+.topbar-meta { display: flex; gap: 8px; }
+.pill {
+  padding: 4px 12px; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--border); color: var(--text-dim);
+}
+.pill.subtle { background: var(--bg-soft); }
+
+/* 状态条 */
+.statusbar {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  padding: 14px 18px; border-radius: 16px;
+  background: var(--panel); border: 1px solid var(--border);
+}
+.status-item { display: flex; flex-direction: column; gap: 2px; }
+.status-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .06em; }
+.status-value { font-size: 13px; font-weight: 600; }
+.providers { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+.badge {
+  padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border);
+}
+.badge.openrouter   { color: var(--accent-2); background: rgba(167,139,250,.12); }
+.badge.deepseek     { color: var(--orange); background: rgba(251,191,36,.10); }
+.badge.siliconflow  { color: var(--accent); background: rgba(34,211,238,.10); }
+.badge.opencode_go  { color: #4ade80; background: rgba(74,222,128,.12); }
+.badge.opencode_zen { color: #4ade80; background: rgba(74,222,128,.08); }
+.badge.official     { color: var(--text); background: rgba(148,163,184,.12); }
+.badge.offpeak      { color: var(--green); background: rgba(52,211,153,.12); border-color: rgba(52,211,153,.35); }
+.badge.peak         { color: var(--orange); background: rgba(251,191,36,.10); }
+.btn-refresh {
+  margin-left: auto; padding: 8px 16px; border-radius: 10px; cursor: pointer;
+  border: 1px solid rgba(34,211,238,.4); color: var(--accent);
+  background: rgba(34,211,238,.08); font-size: 13px; font-weight: 600;
+  transition: .15s;
+}
+.btn-refresh:hover { background: rgba(34,211,238,.18); }
+.btn-refresh:disabled { opacity: .5; cursor: wait; }
+
+/* 面板 */
+.panel {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 18px; padding: 18px;
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; gap: 12px; flex-wrap: wrap;
+}
+.panel-head h2 { font-size: 16px; }
+.hint { color: var(--text-dim); font-size: 12px; }
+
+/* 族卡片 */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 14px; }
+.family-card { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--bg-soft); }
+.family-head {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: var(--panel-2); font-weight: 700;
+}
+.family-head .f-emoji { font-size: 18px; }
+.family-head .f-name { font-size: 15px; }
+.family-head .f-count { margin-left: auto; color: var(--text-dim); font-size: 12px; font-weight: 500; }
+
+.tier-grid {
+  display: grid; grid-template-columns: 56px 1.6fr 1fr 0.9fr 0.9fr 70px;
+  gap: 8px; align-items: center; padding: 8px 14px; font-size: 13px;
+  border-top: 1px solid var(--border);
+}
+.tier-grid.tier-head {
+  color: var(--text-dim); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .05em; border-top: none; padding-top: 10px;
+}
+.tier-grid .tier { font-weight: 700; color: var(--text); }
+.tier-grid .model { font-family: var(--mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tier-grid .prov { font-size: 12px; }
+.tier-grid .price { text-align: right; font-family: var(--mono); font-size: 12px; }
+.tier-grid .price small { color: var(--text-dim); font-size: 10px; }
+.badge-tiny {
+  padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  text-align: center; justify-self: center;
+}
+.badge-tiny.green  { color: var(--green); background: rgba(52,211,153,.10); }
+.badge-tiny.orange { color: var(--orange); background: rgba(251,191,36,.10); }
+.badge-tiny.gray   { color: var(--text-dim); background: rgba(139,152,171,.10); }
+
+.alts { padding: 6px 14px 10px; color: var(--text-dim); font-size: 12px; border-top: 1px dashed var(--border); }
+.alts span { margin-right: 12px; }
+.alts code { font-family: var(--mono); font-size: 11px; color: var(--text); }
+
+.empty {
+  padding: 30px; text-align: center; color: var(--text-dim);
+}
+.empty .big { font-size: 40px; display: block; margin-bottom: 10px; }
+.empty.small { padding: 18px; font-size: 13px; }
+
+/* 比价矩阵 */
+.model-block { border-top: 1px solid var(--border); padding: 4px 0; }
+.model-block:first-of-type { border-top: none; }
+.model-head {
+  padding: 8px 14px 2px; color: var(--text);
+}
+.model-head code { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+.matrix-head, .matrix-row {
+  display: grid; grid-template-columns: 1.3fr 0.7fr 0.7fr 0.7fr 0.7fr 1.4fr;
+  gap: 8px; align-items: center; padding: 5px 14px; font-size: 12px;
+}
+.matrix-head {
+  color: var(--text-dim); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .05em; padding-top: 8px;
+}
+.matrix-row:hover { background: rgba(255,255,255,.02); }
+.matrix-row .route .badge { margin: 0; }
+.matrix-row .price { text-align: right; font-family: var(--mono); }
+.matrix-row .price.muted { color: var(--text-dim); }
+.matrix-row .tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.badge-tiny.blue   { color: #60a5fa; background: rgba(96,165,250,.10); }
+
+/* 涨跌情报 */
+.diff-summary { display: flex; gap: 16px; padding: 10px 14px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
+.diff-summary .down { color: var(--green); }
+.diff-summary .up { color: var(--red, #f87171); }
+.diff-summary .new { color: #c084fc; }
+.diff-summary .gone { color: var(--text-dim); }
+.diff-row {
+  padding: 6px 14px; font-size: 13px; font-family: var(--mono);
+  border-top: 1px solid var(--border);
+}
+.diff-row .diff-mark { font-weight: 700; }
+.diff-row.down { color: var(--green); }
+.diff-row.up { color: #f87171; }
+.diff-row.new { color: #c084fc; }
+.diff-row.gone { color: var(--text-dim); }
+.diff-row .diff-prov { color: var(--text-dim); font-size: 11px; }
+
+/* 限时折扣 */
+.deal-summary { padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--green); }
+.deal-head, .deal-row {
+  display: grid; grid-template-columns: 0.8fr 1.8fr 0.7fr 1.3fr 0.8fr;
+  gap: 8px; align-items: center; padding: 6px 14px; font-size: 12px;
+}
+.deal-head {
+  color: var(--text-dim); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .05em; border-top: 1px solid var(--border); padding-top: 8px;
+}
+.deal-row { border-top: 1px solid var(--border); }
+.deal-row:hover { background: rgba(255,255,255,.02); }
+.deal-pct { color: var(--green); font-weight: 700; }
+.deal-model { font-family: var(--mono); font-size: 12px; color: var(--text); }
+.deal-family { color: var(--text-dim); }
+.deal-price { text-align: right; font-family: var(--mono); color: var(--text); }
+.deal-tags { display: flex; gap: 4px; }
+
+/* 配置区 */
+.tabs { display: flex; gap: 6px; }
+.tab {
+  padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  border: 1px solid var(--border); color: var(--text-dim); background: transparent;
+}
+.tab.active { color: var(--accent); border-color: rgba(34,211,238,.4); background: rgba(34,211,238,.08); }
+.cfg-wrap { position: relative; }
+.btn-copy {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 12px;
+  border: 1px solid var(--border); color: var(--text-dim); background: var(--panel-2);
+}
+.btn-copy:hover { color: var(--accent); border-color: rgba(34,211,238,.4); }
+.cfg-code {
+  background: #0a0e15; border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; max-height: 420px; overflow: auto;
+  font-family: var(--mono); font-size: 12px; line-height: 1.6;
+  color: #c9d6e8; white-space: pre; tab-size: 2;
+}
+
+/* 脚注 */
+.footer { color: var(--text-dim); font-size: 12px; text-align: center; }
+.footer code { font-family: var(--mono); background: var(--panel-2); padding: 1px 6px; border-radius: 5px; }
+
+@media (max-width: 720px) {
+  .cards { grid-template-columns: 1fr; }
+  .tier-grid { grid-template-columns: 48px 1fr 1fr 60px; }
+  .tier-grid .prov, .tier-grid.tier-head .p-h { display: none; }
+}
+
+/* ===== 浮窗 (tooltip) ===== */
+.tip { position: relative; cursor: help; display: inline-block; }
+.tip::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
+  background: #0a0e15; color: #c9d6e8; border: 1px solid var(--border);
+  padding: 8px 10px; border-radius: 8px; font-size: 12px; font-weight: 400;
+  white-space: pre-line; max-width: 340px; min-width: 160px;
+  z-index: 20; opacity: 0; pointer-events: none;
+  transition: opacity .12s ease; line-height: 1.5;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .5);
+}
+.tip:hover::after { opacity: 1; }
+
+.badge-tiny.purple { color: #c084fc; background: rgba(192,132,252,.10); }
+
+/* ===== 族卡片：折叠 / 置顶 / 拖拽 ===== */
+.family-card.pinned { border-color: rgba(251,191,36,.45); box-shadow: 0 0 0 1px rgba(251,191,36,.15); }
+.family-card.pinned .family-head { background: rgba(251,191,36,.08); }
+.family-card.collapsed .matrix-head,
+.family-card.collapsed .model-block { display: none; }
+.family-head { cursor: pointer; user-select: none; }
+.family-head .f-drag { cursor: grab; color: var(--text-dim); font-size: 14px; margin-right: 2px; }
+.family-head .f-pin,
+.family-head .f-collapse {
+  background: transparent; border: none; cursor: pointer; color: var(--text-dim);
+  font-size: 13px; padding: 2px 5px; border-radius: 6px; line-height: 1;
+}
+.family-head .f-pin:hover { color: var(--orange); }
+.family-head .f-pin.on { color: var(--orange); }
+.family-head .f-collapse:hover { color: var(--accent); }
+
+/* ===== 价格：原价划掉 + 人民币小字 ===== */
+.price s.list { color: var(--text-dim); text-decoration: line-through; font-size: 11px; margin-right: 4px; }
+.price small.cny { color: var(--accent); font-size: 10px; opacity: .85; margin-left: 2px; }
+
+/* ===== 路线官网链接 ===== */
+.route .src { text-decoration: none; font-size: 11px; opacity: .7; margin-left: 2px; }
+.route .src:hover { opacity: 1; }
+
+/* ===== 面板控制按钮 ===== */
+.matrix-ctrl { display: flex; gap: 6px; }
+.btn-small {
+  padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 12px;
+  border: 1px solid var(--border); color: var(--text-dim); background: transparent;
+}
+.btn-small:hover { color: var(--accent); border-color: rgba(34,211,238,.4); }
+.btn-small.active { color: var(--accent); border-color: rgba(34,211,238,.4); background: rgba(34,211,238,.08); }
+
+.family-card[draggable="true"]:active { cursor: grabbing; }

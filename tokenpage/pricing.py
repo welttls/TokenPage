@@ -1,0 +1,82 @@
+"""峰谷计算 + 货币换算 + 有效价格。
+
+规则位于 ~/.tokenpage/rules.json，形如：
+{
+  "deepseek": {
+    "peak_hours_utc": [["01:00","04:00"],["06:00","10:00"]],
+    "offpeak_multiplier": 0.5,
+    "note": "...",
+    "effective_from": "2026-08-16T16:00:00Z"
+  }
+}
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from tokenpage.config import load_rules
+
+
+def _parse_hm(s: str) -> int:
+    h, m = s.split(":")
+    return int(h) * 60 + int(m)
+
+
+def _minutes_of(now_utc: datetime) -> int:
+    return now_utc.hour * 60 + now_utc.minute
+
+
+def is_in_ranges(minute: int, ranges: list) -> bool:
+    """判断 minute（一天内分钟数）是否落在任一 [start,end) 区间，支持跨天。"""
+    for start, end in ranges:
+        s, e = _parse_hm(start), _parse_hm(end)
+        if s <= e:
+            if s <= minute < e:
+                return True
+        else:  # 跨天，如 22:00-02:00
+            if minute >= s or minute < e:
+                return True
+    return False
+
+
+def offpeak_status(
+    provider: str, now_utc: datetime | None = None
+) -> tuple[bool | None, float | None]:
+    """返回 (是否谷时, 倍率)。该 provider 无规则则返回 (None, None)。"""
+    rules = load_rules()
+    prov = rules.get(provider)
+    if not prov:
+        return None, None
+    peak = prov.get("peak_hours_utc", [])
+    now = now_utc or datetime.now(timezone.utc)
+    minute = _minutes_of(now)
+    in_peak = is_in_ranges(minute, peak) if peak else False
+    try:
+        mult = float(prov.get("offpeak_multiplier", 1.0))
+    except (TypeError, ValueError):
+        mult = 1.0
+    return (not in_peak), mult
+
+
+def apply_offpeak(quote, now_utc: datetime | None = None):
+    """就地给 quote 应用峰谷折扣。
+
+    若当前为谷时且该 provider 有峰谷规则，直接把 prompt_usd_per_1m /
+    completion_usd_per_1m 乘以折扣（存储、排序、显示统一用「有效价」），
+    原始基准价保留在 raw_prompt / raw_completion。
+    """
+    off, mult = offpeak_status(quote.provider, now_utc)
+    quote.is_offpeak = off
+    if off and mult is not None:
+        quote.offpeak_multiplier = mult
+        quote.discount_type = "offpeak"
+        if quote.prompt_usd_per_1m is not None:
+            quote.prompt_usd_per_1m = round(quote.prompt_usd_per_1m * mult, 6)
+        if quote.completion_usd_per_1m is not None:
+            quote.completion_usd_per_1m = round(quote.completion_usd_per_1m * mult, 6)
+        if quote.cache_read_usd_per_1m is not None:
+            quote.cache_read_usd_per_1m = round(quote.cache_read_usd_per_1m * mult, 6)
+        if quote.cache_write_usd_per_1m is not None:
+            quote.cache_write_usd_per_1m = round(quote.cache_write_usd_per_1m * mult, 6)
+    return quote

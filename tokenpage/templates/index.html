@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Token黄页 · 查模型价格</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="app">
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">📖</div>
+        <div>
+          <h1>Token<span>黄页</span></h1>
+          <p class="tagline">查模型价格，上 Token 黄页 · 主流模型优惠情报 · 桌宠式比价</p>
+        </div>
+      </div>
+      <div class="topbar-meta">
+        <span class="pill subtle" id="now">—</span>
+        <span class="pill subtle">v{{ version }}</span>
+      </div>
+    </header>
+
+    <section class="statusbar" id="statusbar">
+      <div class="status-item">
+        <span class="status-label">数据时间</span>
+        <span class="status-value" id="dataTime">—</span>
+      </div>
+      <div class="status-item providers" id="providers"></div>
+      <div class="status-item">
+        <span class="status-label">峰谷</span>
+        <span class="status-value" id="offpeak">—</span>
+      </div>
+      <button class="btn-refresh" id="btnRefresh">↻ 刷新价格</button>
+    </section>
+
+    <main>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>模型 × 路线 比价矩阵</h2>
+          <div class="tabs">
+            <button class="tab active" data-tab="matrix">比价矩阵</button>
+            <button class="tab" data-tab="diff">涨跌情报</button>
+            <button class="tab" data-tab="deals">限时折扣</button>
+          </div>
+          <div class="matrix-ctrl">
+            <button class="btn-small" id="btnAlpha" title="模型族按首字母排序">🔤 按字母排序</button>
+          </div>
+          <span class="hint">点击族头折叠/展开 · ⠿ 拖拽排序 · 📌 置顶 · 悬停看说明</span>
+        </div>
+        <div id="matrixPanel"></div>
+        <div id="diffPanel" style="display:none"></div>
+        <div id="dealsPanel" style="display:none"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>100% 本地 · 数据存 <code>~/.tokenpage/prices.db</code> · 仅保留最近 2 天 · 零上传零上报</span>
+    </footer>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
