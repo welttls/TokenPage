@@ -16,19 +16,22 @@
         <span class="mh-meta">TOKEN YELLOW PAGES · EST. 2026</span>
         <span class="mh-meta" id="now">—</span>
         <span class="mh-meta">VOL. 1 · NO. {{ version }}</span>
+        <button class="btn-lang" id="btnLang" type="button" aria-pressed="false" title="切换中英文 / Toggle language">
+          <span class="lang-zh">中文</span><span class="lang-sep">/</span><span class="lang-en">EN</span>
+        </button>
       </div>
       <div class="masthead-mid">
         <div class="brand">
           <div class="logo">☎</div>
           <div class="brand-text">
-            <h1>Token<span>黄页</span></h1>
-            <p class="tagline">— 模型价格分类簿 · 主流渠道优惠情报 · 一册在手比价不愁 —</p>
+            <h1>Token<span data-i18n="brand_suffix">黄页</span></h1>
+            <p class="tagline" data-i18n="tagline">— 模型价格分类簿 · 主流渠道优惠情报 · 一册在手比价不愁 —</p>
           </div>
         </div>
         <div class="masthead-ad">
           <div class="ad-box">
-            <span class="ad-tag">本页广告位</span>
-            <span class="ad-line">查价格 · 上黄页</span>
+            <span class="ad-tag" data-i18n="ad_tag">本页广告位</span>
+            <span class="ad-line" data-i18n="ad_line">查价格 · 上黄页</span>
           </div>
         </div>
       </div>
@@ -37,15 +40,15 @@
 
     <section class="statusbar" id="statusbar">
       <div class="status-item">
-        <span class="status-label">数据时间</span>
+        <span class="status-label" data-i18n="status_data">数据时间</span>
         <span class="status-value" id="dataTime">—</span>
       </div>
       <div class="status-item">
-        <span class="status-label">收录渠道</span>
+        <span class="status-label" data-i18n="status_sources">收录渠道</span>
         <div class="providers" id="providers"></div>
       </div>
       <div class="status-item">
-        <span class="status-label">峰谷电价</span>
+        <span class="status-label" data-i18n="status_offpeak">峰谷电价</span>
         <span class="status-value" id="offpeak">—</span>
       </div>
       <button class="btn-refresh" id="btnRefresh">↻ 刷新价格</button>
@@ -55,11 +58,11 @@
     <main>
       <section class="panel">
         <div class="panel-head">
-          <h2><span class="h2-mark">§</span> 模型 × 路线 比价分类栏</h2>
+          <h2><span class="h2-mark">§</span> <span data-i18n="panel_title">模型 × 路线 比价分类栏</span></h2>
           <div class="tabs">
-            <button class="tab active" data-tab="matrix">比价矩阵</button>
-            <button class="tab" data-tab="diff">涨跌情报</button>
-            <button class="tab" data-tab="deals">限时折扣</button>
+            <button class="tab active" data-tab="matrix" data-i18n="tab_matrix">比价矩阵</button>
+            <button class="tab" data-tab="diff" data-i18n="tab_diff">涨跌情报</button>
+            <button class="tab" data-tab="deals" data-i18n="tab_deals">限时折扣</button>
           </div>
           <div class="matrix-ctrl">
             <button class="btn-small" id="btnCny" title="切换美元/人民币主显">$ 美元</button>
@@ -67,7 +70,7 @@
             <button class="btn-small" id="btnAlphaReset" title="恢复默认顺序" style="display:none">↩</button>
             <button class="btn-small" id="btnCollapseAll" title="一键收起/展开全部模型族">▸ 全部收起</button>
           </div>
-          <span class="hint">点击族头折叠/展开 · ⠿ 拖拽排序 · 📌 置顶 · 悬停看说明</span>
+          <span class="hint" data-i18n="hint">点击族头折叠/展开 · ⠿ 拖拽排序 · 📌 置顶 · 悬停看说明</span>
         </div>
         <div id="matrixPanel"></div>
         <div id="diffPanel" style="display:none"></div>
@@ -77,7 +80,7 @@
 
     <footer class="footer">
       <div class="footer-rule">✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</div>
-      <span>本簿免费 · 价目每日一印，隔两日作废重排 · 抄自各家公开价目，一翻便知哪家划算</span>
+      <span data-i18n="footer">本簿免费 · 价目每日一印，隔两日作废重排 · 抄自各家公开价目，一翻便知哪家划算</span>
     </footer>
   </div>
 

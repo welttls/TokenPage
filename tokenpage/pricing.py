@@ -43,13 +43,25 @@ def is_in_ranges(minute: int, ranges: list) -> bool:
 def offpeak_status(
     provider: str, now_utc: datetime | None = None
 ) -> tuple[bool | None, float | None]:
-    """返回 (是否谷时, 倍率)。该 provider 无规则则返回 (None, None)。"""
+    """返回 (是否谷时, 倍率)。该 provider 无规则则返回 (None, None)。
+
+    若规则声明了 effective_from（峰谷生效时刻），生效前一律返回 (None, None)，
+    避免对「生效前固定价」误乘折扣。
+    """
     rules = load_rules()
     prov = rules.get(provider)
     if not prov:
         return None, None
-    peak = prov.get("peak_hours_utc", [])
     now = now_utc or datetime.now(timezone.utc)
+    eff = prov.get("effective_from")
+    if eff:
+        try:
+            eff_dt = datetime.fromisoformat(eff.replace("Z", "+00:00"))
+            if now < eff_dt:
+                return None, None
+        except ValueError:
+            pass
+    peak = prov.get("peak_hours_utc", [])
     minute = _minutes_of(now)
     in_peak = is_in_ranges(minute, peak) if peak else False
     try:

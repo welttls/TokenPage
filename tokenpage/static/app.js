@@ -46,6 +46,255 @@ document.addEventListener(
   true
 );
 
+/* ---------------- 中英文切换（i18n） ---------------- */
+const LANG_KEY = "tp.lang";
+let lang = "zh"; // "zh" | "en"
+try { lang = localStorage.getItem(LANG_KEY) || "zh"; } catch {}
+
+const I18N = {
+  zh: {
+    title: "Token黄页 · 查模型价格",
+    brand_suffix: "黄页",
+    tagline: "— 模型价格分类簿 · 主流渠道优惠情报 · 一册在手比价不愁 —",
+    ad_tag: "本页广告位",
+    ad_line: "查价格 · 上黄页",
+    status_data: "数据时间",
+    status_sources: "收录渠道",
+    status_offpeak: "峰谷电价",
+    refresh: "↻ 刷新价格",
+    force: "⚡ 强制刷新",
+    cooling: "⏳ 冷却 {n}",
+    force_cooling: "⚡ 强刷 {n}",
+    refreshing: "抓取中…",
+    force_refreshing: "强制抓取中…",
+    panel_title: "模型 × 路线 比价分类栏",
+    tab_matrix: "比价矩阵",
+    tab_diff: "涨跌情报",
+    tab_deals: "限时折扣",
+    btn_usd: "$ 美元",
+    btn_cny: "¥ 人民币",
+    collapse_all: "▸ 全部收起",
+    expand_all: "▾ 全部展开",
+    hint: "点击族头折叠/展开 · ⠿ 拖拽排序 · 📌 置顶 · 悬停看说明",
+    footer: "本簿免费 · 价目每日一印，隔两日作废重排 · 抄自各家公开价目，一翻便知哪家划算",
+    no_data_refresh: "（暂无数据，请先刷新）",
+    no_data_readonly: "（无数据）",
+    no_data_click: "（无数据，请点击「刷新价格」）",
+    offpeak_no_rule: "无规则",
+    offpeak_on: "🌙 谷时（折扣生效）",
+    offpeak_off: "☀️ 峰时（原价）",
+    diff_empty_need_two: "暂无涨跌对比：需要至少两次抓取。",
+    diff_empty_no_change: "本次抓取与上次相比没有价格变化。",
+    diff_down: "↓ 降价 {n}",
+    diff_up: "↑ 涨价 {n}",
+    diff_new: "🆕 新上架 {n}",
+    diff_gone: "❌ 下架 {n}",
+    diff_in: "输入 {f}→{t}",
+    deals_empty: "暂无限时折扣：请先刷新价格抓取 OpenRouter 折扣。",
+    deals_summary: "🎁 共 {n} 个 OpenRouter 限时折扣（Go 清单折扣已并入比价矩阵，此处不再重复）",
+    deal_head_off: "折扣",
+    deal_head_model: "模型",
+    deal_head_family: "族",
+    deal_head_price: "输入 / 输出",
+    deal_head_tags: "标签",
+    matrix_head_route: "路线",
+    matrix_head_in: "输入",
+    matrix_head_out: "输出",
+    matrix_head_cr: "缓存读",
+    matrix_head_cw: "缓存写",
+    matrix_head_tags: "标签 / ZDR",
+    models_count: "{n} 模型",
+    empty_readonly: "暂无价格数据。<br>服务端尚未抓取，请等待管理员执行 tokenpage fetch。",
+    empty_normal: "暂无价格数据。<br>点击右上角「刷新价格」开始抓取。",
+    fetch_error: "部分站点抓取失败：",
+    fetch_fail: "抓取失败：",
+    force_fetch_fail: "强制刷新失败：",
+    free: "🆓 免费",
+    route_site: "官网：",
+    tip_quota: "OpenCode Go 订阅额度折算：等效价 = 标价 ÷ 额度倍率（$10/月对应的额度价值）。按全额度消耗计算（额度用不完实际更贵）",
+    tip_promo: "OpenCode Go 限时额度促销（2x usage）：该模型当月使用额度翻倍",
+    tip_deal: "OpenRouter 限时折扣：{pct}% off，显示价已为折扣后价",
+    tip_zdr: "零数据保留（ZDR）：数据不用于训练、不保留",
+    tip_retention: "数据保留 {n} 天",
+    tip_tiered: "有阶梯价格：长上下文（超过阈值）单价更高",
+    tip_free: "免费 / 限时免费提供",
+    tip_offpeak: "谷时计价：当前处于折扣时段（如 DeepSeek 谷时半价）",
+    quota_line: "标价 ${list} → 等效 ${eff}（{mult}，${fee}/月 → ${quota} 额度）",
+    quota_hint: "※ 等效价按当月额度全量消耗计算；若额度用不完，实际成本会更高。",
+    deal_line: "原价 ${list} → 限时折扣 ${eff}",
+    quota_mult: "额度×{n}",
+    title_cny_off: "当前美元主显（人民币小字），点击切换",
+    title_cny_on: "当前人民币主显（美元小字），点击切换",
+    title_alpha: "模型族按字母排序：A→Z / Z→A 一键切换",
+    title_alpha_reset: "恢复默认顺序",
+    title_collapse: "一键收起全部模型族",
+    title_expand: "一键展开全部模型族",
+    title_force: "冷却期内强制重新抓取（10 分钟一次）",
+    title_lang: "切换中英文 / Toggle language",
+  },
+  en: {
+    title: "Token Yellow Pages · Model Price Finder",
+    brand_suffix: " Yellow Pages",
+    tagline: "— Model Price Directory · Bargain Intel · One Volume, Compare & Conquer —",
+    ad_tag: "AD SPACE",
+    ad_line: "Compare Prices · on the Pages",
+    status_data: "Data Time",
+    status_sources: "Sources",
+    status_offpeak: "Off-peak",
+    refresh: "↻ Refresh",
+    force: "⚡ Force",
+    cooling: "⏳ Cooldown {n}",
+    force_cooling: "⚡ {n}",
+    refreshing: "Fetching…",
+    force_refreshing: "Force fetching…",
+    panel_title: "Models × Routes Price Directory",
+    tab_matrix: "Matrix",
+    tab_diff: "Price Changes",
+    tab_deals: "Deals",
+    btn_usd: "$ USD",
+    btn_cny: "¥ CNY",
+    collapse_all: "▸ Collapse all",
+    expand_all: "▾ Expand all",
+    hint: "Click a family header to fold · ⠿ drag to sort · 📌 pin · hover for help",
+    footer: "Free of charge · prices printed daily, void after two days · compiled from public price lists",
+    no_data_refresh: "(no data yet, please refresh)",
+    no_data_readonly: "(no data)",
+    no_data_click: "(no data, click Refresh)",
+    offpeak_no_rule: "No rule",
+    offpeak_on: "🌙 Off-peak (discount active)",
+    offpeak_off: "☀️ Peak (list price)",
+    diff_empty_need_two: "No comparison yet: need at least two fetches.",
+    diff_empty_no_change: "No price changes since the last fetch.",
+    diff_down: "↓ Price drop {n}",
+    diff_up: "↑ Price rise {n}",
+    diff_new: "🆕 New {n}",
+    diff_gone: "❌ Gone {n}",
+    diff_in: "in {f}→{t}",
+    deals_empty: "No deals yet: please refresh to fetch OpenRouter discounts.",
+    deals_summary: "🎁 {n} OpenRouter limited-time deals (Go-list deals are merged into the matrix)",
+    deal_head_off: "Off",
+    deal_head_model: "Model",
+    deal_head_family: "Family",
+    deal_head_price: "In / Out",
+    deal_head_tags: "Tags",
+    matrix_head_route: "Route",
+    matrix_head_in: "In",
+    matrix_head_out: "Out",
+    matrix_head_cr: "Cache R",
+    matrix_head_cw: "Cache W",
+    matrix_head_tags: "Tags / ZDR",
+    models_count: "{n} models",
+    empty_readonly: "No price data yet.<br>The server hasn't fetched; wait for an admin to run tokenpage fetch.",
+    empty_normal: "No price data yet.<br>Click Refresh (top right) to fetch.",
+    fetch_error: "Some sources failed:",
+    fetch_fail: "Fetch failed:",
+    force_fetch_fail: "Force refresh failed:",
+    free: "🆓 Free",
+    route_site: "Site: ",
+    tip_quota: "OpenCode Go subscription quota: equiv price = list price ÷ multiplier (value of the $10/mo quota). Assumes full monthly quota usage; if you don't use it all, the real cost is higher.",
+    tip_promo: "OpenCode Go limited-time quota promo (2x usage): doubled monthly quota this month",
+    tip_deal: "OpenRouter limited-time deal: {pct}% off, shown price is already discounted",
+    tip_zdr: "Zero Data Retention (ZDR): data not used for training, not retained",
+    tip_retention: "Data retained {n} days",
+    tip_tiered: "Tiered pricing: higher unit price for long contexts (above threshold)",
+    tip_free: "Free / limited-time free",
+    tip_offpeak: "Off-peak pricing: discount period active (e.g. DeepSeek off-peak half price)",
+    quota_line: "List ${list} → equiv ${eff} ({mult}, ${fee}/mo → ${quota} quota)",
+    quota_hint: "※ Equivalent price assumes FULL monthly quota usage; if unused, the real cost is higher.",
+    deal_line: "List ${list} → deal ${eff}",
+    quota_mult: "Quota×{n}",
+    title_cny_off: "Currently USD primary (CNY small); click to switch",
+    title_cny_on: "Currently CNY primary (USD small); click to switch",
+    title_alpha: "Sort families A→Z / Z→A",
+    title_alpha_reset: "Restore default order",
+    title_collapse: "Collapse all families",
+    title_expand: "Expand all families",
+    title_force: "Force re-fetch during cooldown (once per 10 min)",
+    title_lang: "Toggle Chinese / English",
+  },
+};
+
+function t(key, params) {
+  let s = (I18N[lang] && I18N[lang][key] != null) ? I18N[lang][key] : (I18N.zh[key] != null ? I18N.zh[key] : key);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      s = s.split("{" + k + "}").join(v);
+    }
+  }
+  return s;
+}
+
+// 渠道展示名英文映射（后端 label 为中文/原名，按 provider key 翻译）
+const PROVIDER_LABEL_EN = {
+  openrouter: "OpenRouter",
+  openrouter_deals: "OpenRouter Deals",
+  siliconflow: "SiliconFlow",
+  opencode_go: "OpenCode Go",
+  opencode_zen: "OpenCode Zen",
+  deepseek: "DeepSeek Official",
+  official: "Official API",
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  xai: "xAI",
+  moonshot: "Moonshot",
+  zhipu: "Zhipu",
+  alibaba: "Aliyun",
+};
+function plabel(provider, zhLabel) {
+  if (lang !== "en") return zhLabel;
+  return PROVIDER_LABEL_EN[provider] || zhLabel;
+}
+
+// 后端标签（中文）在英文模式下翻译显示（如 额度×6 → Quota×6）
+function translateTag(tag) {
+  if (lang !== "en") return tag;
+  let s = tag;
+  s = s.replace(/额度×/g, "Quota×");
+  s = s.replace(/限时×/g, "Promo×");
+  s = s.replace(/阶梯/g, "Tiered");
+  s = s.replace(/🆓限免/g, "🆓Free");
+  s = s.replace(/🌙谷时/g, "🌙Off-peak");
+  return s;
+}
+
+// 静态文本（data-i18n）按当前语言更新
+function applyStaticLang() {
+  document.title = t("title");
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  const btn = $("#btnLang");
+  if (btn) {
+    btn.classList.toggle("on", lang === "en");
+    btn.setAttribute("aria-pressed", String(lang === "en"));
+    btn.title = t("title_lang");
+  }
+}
+
+// 切语言：静态文本 + 动态面板整体重渲染 + 按钮同步
+function applyLang() {
+  applyStaticLang();
+  if (lastOverview) {
+    renderProviders(lastOverview.providers);
+    renderOffpeak(lastOverview.rules);
+    renderMatrix(lastOverview.matrix);
+    renderDiffs(lastOverview.diffs);
+    renderDeals(lastOverview.deals);
+  }
+  syncAlphaBtn();
+  syncCnyBtn();
+  syncCollapseAllBtn();
+  syncRefreshButtons();
+  tickClock();
+}
+
+function toggleLang() {
+  lang = lang === "zh" ? "en" : "zh";
+  try { localStorage.setItem(LANG_KEY, lang); } catch {}
+  applyLang();
+}
+
 const ROUTE_CLASS = {
   opencode_go: "opencode_go",
   openrouter: "openrouter",
@@ -69,12 +318,15 @@ let currentMatrix = null;
 let currentProviderMeta = {};
 let currentFx = null; // { CNY_per_USD: 7.2, ... }
 let dragFam = null;
+let lastOverview = null; // 最近一次 /api/overview 原始数据（切语言时重渲染用）
 
 // 抓取冷却状态（秒），由 /api/overview 下发，倒计时驱动刷新按钮禁用
 let cooldownRemaining = 0;      // 普通刷新冷却剩余
 let forceCooldownRemaining = 0; // 强制刷新冷却剩余
 let cooldownTimer = null;
 let readonlyMode = false;       // 只读模式（公开部署）：服务端禁用 /api/fetch
+let fetching = false;           // 普通刷新进行中：syncRefreshButtons 不覆盖「抓取中…」状态
+let forceFetching = false;      // 强制刷新进行中：syncRefreshButtons 不覆盖「强制抓取中…」状态
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -96,7 +348,7 @@ function fmtNum(v) {
 
 function fmtPrice(v) {
   if (v == null) return "—";
-  if (v <= 0) return "🆓 免费";
+  if (v <= 0) return t("free");
   // 逐步提高精度，避免极小价（如 $0.004）显示成 $0.00
   for (const d of [2, 3, 4, 6]) {
     const s = v.toFixed(d);
@@ -131,20 +383,18 @@ function saveUI() {
 
 function tagHelp(tag) {
   if (tag.startsWith("额度"))
-    return "OpenCode Go 订阅额度折算：等效价 = 标价 ÷ 额度倍率（$10/月对应的额度价值）";
+    return t("tip_quota");
   if (tag.includes("限时×"))
-    return "OpenCode Go 限时额度促销（2x usage）：该模型当月使用额度翻倍";
+    return t("tip_promo");
   if (tag.startsWith("🎁")) {
     const m = tag.match(/(\d+)%off/);
-    const pct = m ? m[1] : "?";
-    const zhe = pct !== "?" ? `约 ${(100 - Number(pct)) / 10} 折` : "";
-    return `OpenRouter 限时折扣：${pct}% off${zhe ? "（" + zhe + "）" : ""}，显示价已为折扣后价`;
+    return t("tip_deal", { pct: m ? m[1] : "?" });
   }
-  if (tag === "🔒ZDR") return "零数据保留（ZDR）：数据不用于训练、不保留";
-  if (/^\d+d$/.test(tag)) return `数据保留 ${tag.slice(0, -1)} 天`;
-  if (tag === "阶梯") return "有阶梯价格：长上下文（超过阈值）单价更高";
-  if (tag === "🆓限免") return "免费 / 限时免费提供";
-  if (tag === "🌙谷时") return "谷时计价：当前处于折扣时段（如 DeepSeek 谷时半价）";
+  if (tag === "🔒ZDR") return t("tip_zdr");
+  if (/^\d+d$/.test(tag)) return t("tip_retention", { n: tag.slice(0, -1) });
+  if (tag === "阶梯") return t("tip_tiered");
+  if (tag === "🆓限免") return t("tip_free");
+  if (tag === "🌙谷时") return t("tip_offpeak");
   return "";
 }
 
@@ -157,7 +407,7 @@ function renderTags(tags) {
       if (t.startsWith("🎁")) cls = "badge-tiny orange";
       else if (t === "🌙谷时") cls = "badge-tiny blue";
       else if (t === "🔒ZDR") cls = "badge-tiny purple";
-      return tip(`<span class="${cls}">${esc(t)}</span>`, help);
+      return tip(`<span class="${cls}">${esc(translateTag(t))}</span>`, help);
     })
     .join(" ");
 }
@@ -177,7 +427,7 @@ function priceCell(r, kind) {
       ? (r.currency === "CNY" && raw != null ? raw : rate ? usd * rate : null)
       : usd;
   }
-  const main = usd == null ? "—" : usd <= 0 ? "🆓 免费" : (uiState.cny ? `¥${fmtNum(val)}` : fmtPrice(usd));
+  const main = usd == null ? "—" : usd <= 0 ? t("free") : (uiState.cny ? `¥${fmtNum(val)}` : fmtPrice(usd));
 
   if (!isDeal) return main;
 
@@ -196,40 +446,52 @@ function priceCell(r, kind) {
 function routeTooltip(r) {
   const meta = currentProviderMeta[r.provider] || {};
   const parts = [];
-  if (meta.note) parts.push(meta.note);
+  const note = lang === "en" ? (meta.note_en || meta.note) : meta.note;
+  if (note) parts.push(note);
   if (r.provider === "opencode_go" && r.quota) {
-    const mult = r.quota.tag || (r.quota.effective_multiplier ? `额度×${r.quota.effective_multiplier}` : "");
+    const mult = r.quota.tag
+      ? translateTag(r.quota.tag)
+      : (r.quota.effective_multiplier ? t("quota_mult", { n: r.quota.effective_multiplier }) : "");
     parts.push(
-      `标价 $${r.raw_prompt} → 等效 $${r.prompt}（${mult}，$${r.quota.monthly_fee}/月 → $${r.quota.monthly_quota} 额度）`
+      t("quota_line", {
+        list: r.raw_prompt,
+        eff: r.prompt,
+        mult,
+        fee: r.quota.monthly_fee,
+        quota: r.quota.monthly_quota,
+      })
     );
+    // 额度折算精度提示：等效价按当月额度全量消耗计算
+    parts.push(t("quota_hint"));
   }
   if (r.is_openrouter_deal && r.list_prompt != null) {
-    parts.push(`原价 $${r.list_prompt} → 限时折扣 $${r.prompt}`);
+    parts.push(t("deal_line", { list: r.list_prompt, eff: r.prompt }));
   }
-  if (meta.url) parts.push("官网：" + meta.url);
+  if (meta.url) parts.push(t("route_site") + meta.url);
   return parts.join("\n");
 }
 
 function renderProviders(providers) {
   const box = $("#providers");
   if (!providers || Object.keys(providers).length === 0) {
-    box.innerHTML = `<span class="status-value">（暂无数据，请先刷新）</span>`;
+    box.innerHTML = `<span class="status-value">${t("no_data_refresh")}</span>`;
     return;
-  }  box.innerHTML = Object.values(providers)
-    .map((p) => `<span class="badge ${badge(esc(p.provider))}">${esc(p.label)} · ${Number(p.count) || 0}</span>`)
+  }
+  box.innerHTML = Object.entries(providers)
+    .map(([prov, p]) => `<span class="badge ${badge(esc(prov))}">${esc(plabel(prov, p.label))} · ${Number(p.count) || 0}</span>`)
     .join("");
 }
 
 function renderOffpeak(rules) {
   const el = $("#offpeak");
   if (!rules || rules.length === 0) {
-    el.textContent = "无规则";
+    el.textContent = t("offpeak_no_rule");
     return;
   }
   el.innerHTML = rules
     .map((r) => {
-      const mark = r.is_offpeak === true ? "🌙 谷时（折扣生效）" : r.is_offpeak === false ? "☀️ 峰时（原价）" : "—";
-      return `<span class="status-value">${esc(r.provider_label)}: ${mark}</span>`;
+      const mark = r.is_offpeak === true ? t("offpeak_on") : r.is_offpeak === false ? t("offpeak_off") : "—";
+      return `<span class="status-value">${esc(plabel(r.provider, r.provider_label))}: ${mark}</span>`;
     })
     .join(" · ");
 }
@@ -237,11 +499,11 @@ function renderOffpeak(rules) {
 function renderDiffs(diffs) {
   const el = $("#diffPanel");
   if (!diffs || !diffs.previous) {
-    el.innerHTML = `<div class="empty small">暂无涨跌对比：需要至少两次抓取。</div>`;
+    el.innerHTML = `<div class="empty small">${t("diff_empty_need_two")}</div>`;
     return;
   }
   if (!diffs.changes || diffs.changes.length === 0) {
-    el.innerHTML = `<div class="empty small">本次抓取与上次相比没有价格变化。</div>`;
+    el.innerHTML = `<div class="empty small">${t("diff_empty_no_change")}</div>`;
     return;
   }
   const s = diffs.summaries || {};
@@ -252,15 +514,15 @@ function renderDiffs(diffs) {
       const cls = c.action === "down" ? "down" : c.action === "up" ? "up" : c.action === "new" ? "new" : "gone";
       const pf = c.prompt_from == null ? "—" : `$${c.prompt_from}`;
       const pt = c.prompt_to == null ? "—" : `$${c.prompt_to}`;
-      return `<div class="diff-row ${cls}"><span class="diff-mark">${mark}</span> ${esc(c.family || "")} <code>${esc(c.model_id)}</code> <span class="diff-prov">${esc(c.provider_label || c.provider || "")}</span> 输入 ${pf}→${pt}</div>`;
+      return `<div class="diff-row ${cls}"><span class="diff-mark">${mark}</span> ${esc(c.family || "")} <code>${esc(c.model_id)}</code> <span class="diff-prov">${esc(plabel(c.provider, c.provider_label || c.provider || ""))}</span> ${t("diff_in", { f: pf, t: pt })}</div>`;
     })
     .join("");
   el.innerHTML = `
     <div class="diff-summary">
-      <span class="down">↓ 降价 ${s.down || 0}</span>
-      <span class="up">↑ 涨价 ${s.up || 0}</span>
-      <span class="new">🆕 新上架 ${s.new || 0}</span>
-      <span class="gone">❌ 下架 ${s.gone || 0}</span>
+      <span class="down">${t("diff_down", { n: s.down || 0 })}</span>
+      <span class="up">${t("diff_up", { n: s.up || 0 })}</span>
+      <span class="new">${t("diff_new", { n: s.new || 0 })}</span>
+      <span class="gone">${t("diff_gone", { n: s.gone || 0 })}</span>
     </div>
     ${rows}`;
 }
@@ -268,7 +530,7 @@ function renderDiffs(diffs) {
 function renderDeals(deals) {
   const el = $("#dealsPanel");
   if (!deals || deals.length === 0) {
-    el.innerHTML = `<div class="empty small">暂无限时折扣：请先刷新价格抓取 OpenRouter 折扣。</div>`;
+    el.innerHTML = `<div class="empty small">${t("deals_empty")}</div>`;
     return;
   }
   const rows = deals
@@ -287,8 +549,8 @@ function renderDeals(deals) {
     })
     .join("");
   el.innerHTML = `
-    <div class="deal-summary">🎁 共 ${deals.length} 个 OpenRouter 限时折扣（Go 清单折扣已并入比价矩阵，此处不再重复）</div>
-    <div class="deal-head"><span>折扣</span><span>模型</span><span>族</span><span style="text-align:right">输入 / 输出</span><span>标签</span></div>
+    <div class="deal-summary">${t("deals_summary", { n: deals.length })}</div>
+    <div class="deal-head"><span>${t("deal_head_off")}</span><span>${t("deal_head_model")}</span><span>${t("deal_head_family")}</span><span style="text-align:right">${t("deal_head_price")}</span><span>${t("deal_head_tags")}</span></div>
     ${rows}`;
 }
 
@@ -324,16 +586,16 @@ function familyCardHTML(fam) {
         <button class="f-pin${isPinned ? " on" : ""}" data-action="pin" title="置顶/取消置顶">📌</button>
         ${brandIcon(fam.family, "f-logo")}
         <span class="f-name">${esc(fam.family_label || fam.family)}</span>
-        <span class="f-count">${(fam.models || []).length} 模型</span>
+        <span class="f-count">${t("models_count", { n: (fam.models || []).length })}</span>
         <button class="f-collapse" data-action="collapse" title="收起/展开">${isCollapsed ? "▸" : "▾"}</button>
       </div>
       <div class="matrix-head">
-        <span>路线</span>
-        <span style="text-align:right">输入</span>
-        <span style="text-align:right">输出</span>
-        <span style="text-align:right">缓存读</span>
-        <span style="text-align:right">缓存写</span>
-        <span>标签 / ZDR</span>
+        <span>${t("matrix_head_route")}</span>
+        <span style="text-align:right">${t("matrix_head_in")}</span>
+        <span style="text-align:right">${t("matrix_head_out")}</span>
+        <span style="text-align:right">${t("matrix_head_cr")}</span>
+        <span style="text-align:right">${t("matrix_head_cw")}</span>
+        <span>${t("matrix_head_tags")}</span>
       </div>
       ${modelRows}
     </div>`;
@@ -354,7 +616,7 @@ function modelBlockHTML(mv) {
 
 function routeRowHTML(r) {
   const t = routeTooltip(r);
-  const prov = `<span class="badge ${badge(r.provider)}">${esc(r.provider_label)}</span>`;
+  const prov = `<span class="badge ${badge(r.provider)}">${esc(plabel(r.provider, r.provider_label))}</span>`;
   const routeCell = tip(prov, t)
     + (r.source_url ? ` <a class="src" href="${esc(r.source_url)}" target="_blank" rel="noreferrer" title="${esc(r.source_url)}">🔗</a>` : "");
   return `
@@ -374,8 +636,8 @@ function renderMatrix(matrix) {
   const box = $("#matrixPanel");
   if (!matrix || matrix.length === 0) {
     box.innerHTML = readonlyMode
-      ? `<div class="empty"><span class="big">🗂️</span>暂无价格数据。<br>服务端尚未抓取，请等待管理员执行 tokenpage fetch。</div>`
-      : `<div class="empty"><span class="big">🗂️</span>暂无价格数据。<br>点击右上角「刷新价格」开始抓取。</div>`;
+      ? `<div class="empty"><span class="big">🗂️</span>${t("empty_readonly")}</div>`
+      : `<div class="empty"><span class="big">🗂️</span>${t("empty_normal")}</div>`;
     return;
   }
   const sorted = sortFamilies(matrix);
@@ -413,8 +675,8 @@ function syncCollapseAllBtn() {
   const btn = $("#btnCollapseAll");
   if (!btn) return;
   const hasCollapsed = currentMatrix && uiState.collapsed.length > 0;
-  btn.textContent = hasCollapsed ? "▾ 全部展开" : "▸ 全部收起";
-  btn.title = hasCollapsed ? "一键展开全部模型族" : "一键收起全部模型族";
+  btn.textContent = hasCollapsed ? t("expand_all") : t("collapse_all");
+  btn.title = hasCollapsed ? t("title_expand") : t("title_collapse");
 }
 
 // 字母排序单按钮双向切换：A→Z ⇄ Z→A（首击进入 A→Z；恢复默认靠拖拽或 ↩ 按钮）
@@ -430,8 +692,12 @@ function syncAlphaBtn() {
   if (!btn) return;
   btn.textContent = uiState.alpha === 2 ? "🔤 Z→A" : "🔤 A→Z";
   btn.classList.toggle("active", uiState.alpha !== 0);
+  btn.title = t("title_alpha");
   const reset = $("#btnAlphaReset");
-  if (reset) reset.style.display = uiState.alpha !== 0 ? "" : "none";
+  if (reset) {
+    reset.title = t("title_alpha_reset");
+    reset.style.display = uiState.alpha !== 0 ? "" : "none";
+  }
 }
 // 恢复默认顺序（退出字母排序）
 function resetAlpha() {
@@ -451,9 +717,9 @@ function toggleCny() {
 function syncCnyBtn() {
   const btn = $("#btnCny");
   if (!btn) return;
-  btn.textContent = uiState.cny ? "¥ 人民币" : "$ 美元";
+  btn.textContent = uiState.cny ? t("btn_cny") : t("btn_usd");
   btn.classList.toggle("active", uiState.cny);
-  btn.title = uiState.cny ? "当前人民币主显（美元小字），点击切换" : "当前美元主显（人民币小字），点击切换";
+  btn.title = uiState.cny ? t("title_cny_on") : t("title_cny_off");
 }
 
 function reorderFamilies(from, to) {
@@ -519,12 +785,13 @@ function setupMatrixEvents() {
 async function loadOverview() {
   const res = await fetch("/api/overview");
   const data = await res.json();
+  lastOverview = data;
   currentProviderMeta = data.provider_meta || {};
   currentFx = data.fx || null;
   readonlyMode = !!data.readonly;
   cooldownRemaining = Math.max(0, Number(data.fetch_cooldown_remaining) || 0);
   forceCooldownRemaining = Math.max(0, Number(data.force_cooldown_remaining) || 0);
-  $("#dataTime").textContent = data.has_data ? (data.fetched_at || "—") : (readonlyMode ? "（无数据）" : "（无数据，请点击「刷新价格」）");
+  $("#dataTime").textContent = data.has_data ? (data.fetched_at || "—") : (readonlyMode ? t("no_data_readonly") : t("no_data_click"));
   renderProviders(data.providers);
   renderOffpeak(data.rules);
   renderMatrix(data.matrix);
@@ -558,20 +825,29 @@ function syncRefreshButtons() {
   main.style.display = "";
   if (cooldownRemaining > 0) {
     main.disabled = true;
-    main.textContent = `⏳ 冷却 ${fmtDur(cooldownRemaining)}`;
+    main.textContent = t("cooling", { n: fmtDur(cooldownRemaining) });
     if (force) {
       force.style.display = "";
-      if (forceCooldownRemaining > 0) {
+      force.title = t("title_force");
+      if (forceFetching) {
         force.disabled = true;
-        force.textContent = `⚡ 强刷 ${fmtDur(forceCooldownRemaining)}`;
+        force.textContent = t("force_refreshing");
+      } else if (forceCooldownRemaining > 0) {
+        force.disabled = true;
+        force.textContent = t("force_cooling", { n: fmtDur(forceCooldownRemaining) });
       } else {
         force.disabled = false;
-        force.textContent = "⚡ 强制刷新";
+        force.textContent = t("force");
       }
     }
   } else {
-    main.disabled = false;
-    main.textContent = "↻ 刷新价格";
+    if (fetching) {
+      main.disabled = true;
+      main.textContent = t("refreshing");
+    } else {
+      main.disabled = false;
+      main.textContent = t("refresh");
+    }
     if (force) force.style.display = "none";
   }
 }
@@ -594,8 +870,9 @@ function startCooldownTimer() {
 async function refreshPrices() {
   if (readonlyMode) return;
   const btn = $("#btnRefresh");
+  fetching = true;
   btn.disabled = true;
-  btn.textContent = "抓取中…";
+  btn.textContent = t("refreshing");
   try {
     const res = await fetch("/api/fetch", { method: "POST" });
     const data = await res.json();
@@ -603,12 +880,13 @@ async function refreshPrices() {
       cooldownRemaining = Math.max(0, Number(data.cooldown_remaining) || 0);
     }
     if (data.errors && Object.keys(data.errors).length) {
-      alert("部分站点抓取失败：\n" + Object.entries(data.errors).map(([k, v]) => `${k}: ${v}`).join("\n"));
+      alert(t("fetch_error") + "\n" + Object.entries(data.errors).map(([k, v]) => `${k}: ${v}`).join("\n"));
     }
     await loadOverview();
   } catch (e) {
-    alert("抓取失败：" + e.message);
+    alert(t("fetch_fail") + e.message);
   } finally {
+    fetching = false;
     syncRefreshButtons();
   }
 }
@@ -617,8 +895,9 @@ async function refreshPrices() {
 async function forceRefresh() {
   if (readonlyMode) return;
   const btn = $("#btnForce");
+  forceFetching = true;
   btn.disabled = true;
-  btn.textContent = "强制抓取中…";
+  btn.textContent = t("force_refreshing");
   try {
     const res = await fetch("/api/fetch?force=1", { method: "POST" });
     const data = await res.json();
@@ -626,19 +905,20 @@ async function forceRefresh() {
       forceCooldownRemaining = Math.max(0, Number(data.force_cooldown_remaining) || 0);
     }
     if (data.errors && Object.keys(data.errors).length) {
-      alert("部分站点抓取失败：\n" + Object.entries(data.errors).map(([k, v]) => `${k}: ${v}`).join("\n"));
+      alert(t("fetch_error") + "\n" + Object.entries(data.errors).map(([k, v]) => `${k}: ${v}`).join("\n"));
     }
     await loadOverview();
   } catch (e) {
-    alert("强制刷新失败：" + e.message);
+    alert(t("force_fetch_fail") + e.message);
   } finally {
+    forceFetching = false;
     syncRefreshButtons();
   }
 }
 
 function tickClock() {
   const now = new Date();
-  $("#now").textContent = now.toLocaleString("zh-CN", { hour12: false });
+  $("#now").textContent = now.toLocaleString(lang === "zh" ? "zh-CN" : "en-US", { hour12: false });
 }
 
 function setup() {
@@ -649,6 +929,9 @@ function setup() {
   $("#btnAlphaReset").addEventListener("click", resetAlpha);
   $("#btnCny").addEventListener("click", toggleCny);
   $("#btnCollapseAll").addEventListener("click", toggleCollapseAll);
+  const langBtn = $("#btnLang");
+  if (langBtn) langBtn.addEventListener("click", toggleLang);
+  applyLang();
   syncAlphaBtn();
   syncCnyBtn();
   syncCollapseAllBtn();

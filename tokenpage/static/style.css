@@ -162,6 +162,24 @@ html, body {
 .btn-force:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
 .btn-force:disabled { opacity: .55; cursor: not-allowed; }
 
+/* 中英文切换：迷你分段按钮（报头右上角） */
+.btn-lang {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 10px; cursor: pointer;
+  border: 1.5px solid var(--line-dark); border-radius: 3px;
+  font-family: var(--serif); font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  color: var(--ink-soft); background: var(--panel-2);
+  text-transform: uppercase; user-select: none;
+  box-shadow: 1px 1px 0 rgba(120, 96, 40, .25);
+}
+.btn-lang .lang-zh { color: var(--accent); }
+.btn-lang .lang-en { color: var(--ink-dim); }
+.btn-lang.on .lang-zh { color: var(--ink-dim); }
+.btn-lang.on .lang-en { color: var(--accent); }
+.btn-lang .lang-sep { color: var(--ink-dim); font-weight: 400; }
+.btn-lang:hover { border-color: var(--accent); }
+.btn-lang:active { transform: translate(1px, 1px); box-shadow: none; }
+
 /* ================= 主面板 ================= */
 .panel {
   background: var(--panel);
