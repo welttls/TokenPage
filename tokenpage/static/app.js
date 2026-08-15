@@ -111,7 +111,9 @@ const I18N = {
     force_fetch_fail: "强制刷新失败：",
     free: "🆓 免费",
     route_site: "官网：",
-    tip_quota: "OpenCode Go 订阅额度折算：等效价 = 标价 ÷ 额度倍率（$10/月对应的额度价值）。按全额度消耗计算（额度用不完实际更贵）",
+    tip_quota: "订阅/套餐额度折算：等效价 = 官方标价 ÷ 额度倍率（月费对应的额度价值）。按全额度消耗计算（额度用不完实际更贵）",
+    tip_claimed: "官方未公布具体 token 额度，按宣称的 N× 使用量估算，不折算等效价",
+    tip_unlimited: "官方未公布具体 token 额度，为无限/扩展额度，无法折算等效价",
     tip_promo: "OpenCode Go 限时额度促销（2x usage）：该模型当月使用额度翻倍",
     tip_deal: "OpenRouter 限时折扣：{pct}% off，显示价已为折扣后价",
     tip_zdr: "零数据保留（ZDR）：数据不用于训练、不保留",
@@ -191,7 +193,9 @@ const I18N = {
     force_fetch_fail: "Force refresh failed:",
     free: "🆓 Free",
     route_site: "Site: ",
-    tip_quota: "OpenCode Go subscription quota: equiv price = list price ÷ multiplier (value of the $10/mo quota). Assumes full monthly quota usage; if you don't use it all, the real cost is higher.",
+    tip_quota: "Subscription plan quota: equiv price = list price ÷ multiplier (value of the monthly fee). Assumes FULL monthly quota usage; if unused, the real cost is higher.",
+    tip_claimed: "No token quota published; estimated from claimed N× usage, no equivalent price.",
+    tip_unlimited: "No token quota published; unlimited/extended usage, no equivalent price.",
     tip_promo: "OpenCode Go limited-time quota promo (2x usage): doubled monthly quota this month",
     tip_deal: "OpenRouter limited-time deal: {pct}% off, shown price is already discounted",
     tip_zdr: "Zero Data Retention (ZDR): data not used for training, not retained",
@@ -239,6 +243,11 @@ const PROVIDER_LABEL_EN = {
   moonshot: "Moonshot",
   zhipu: "Zhipu",
   alibaba: "Aliyun",
+  anthropic_plan: "Claude Sub",
+  openai_plan: "ChatGPT Sub",
+  zhipu_plan: "GLM Sub",
+  alibaba_plan: "Qoder Sub",
+  moonshot_plan: "Kimi Sub",
 };
 function plabel(provider, zhLabel) {
   if (lang !== "en") return zhLabel;
@@ -254,6 +263,9 @@ function translateTag(tag) {
   s = s.replace(/阶梯/g, "Tiered");
   s = s.replace(/🆓限免/g, "🆓Free");
   s = s.replace(/🌙谷时/g, "🌙Off-peak");
+  s = s.replace(/宣称×/g, "Claimed×");
+  s = s.replace(/♾️无限/g, "♾️Unlimited");
+  s = s.replace(/♾️扩展额度/g, "♾️Extended");
   return s;
 }
 
@@ -308,6 +320,11 @@ const ROUTE_CLASS = {
   zhipu: "official",
   alibaba: "official",
   deepseek: "deepseek",
+  anthropic_plan: "plan",
+  openai_plan: "plan",
+  zhipu_plan: "plan",
+  alibaba_plan: "plan",
+  moonshot_plan: "plan",
 };
 
 // 折叠/排序/置顶状态（纯本地 localStorage）
@@ -386,6 +403,10 @@ function tagHelp(tag) {
     return t("tip_quota");
   if (tag.includes("限时×"))
     return t("tip_promo");
+  if (tag.startsWith("宣称"))
+    return t("tip_claimed");
+  if (tag.startsWith("♾️"))
+    return t("tip_unlimited");
   if (tag.startsWith("🎁")) {
     const m = tag.match(/(\d+)%off/);
     return t("tip_deal", { pct: m ? m[1] : "?" });
@@ -427,7 +448,9 @@ function priceCell(r, kind) {
       ? (r.currency === "CNY" && raw != null ? raw : rate ? usd * rate : null)
       : usd;
   }
-  const main = usd == null ? "—" : usd <= 0 ? t("free") : (uiState.cny ? `¥${fmtNum(val)}` : fmtPrice(usd));
+  const main = usd == null
+    ? (r.unlimited && (kind === "prompt" || kind === "completion") ? "♾️" : "—")
+    : usd <= 0 ? t("free") : (uiState.cny ? `¥${fmtNum(val)}` : fmtPrice(usd));
 
   if (!isDeal) return main;
 
@@ -448,7 +471,7 @@ function routeTooltip(r) {
   const parts = [];
   const note = lang === "en" ? (meta.note_en || meta.note) : meta.note;
   if (note) parts.push(note);
-  if (r.provider === "opencode_go" && r.quota) {
+  if (r.route_type === "subscription" && r.quota) {
     const mult = r.quota.tag
       ? translateTag(r.quota.tag)
       : (r.quota.effective_multiplier ? t("quota_mult", { n: r.quota.effective_multiplier }) : "");
@@ -931,6 +954,20 @@ function setup() {
   $("#btnCollapseAll").addEventListener("click", toggleCollapseAll);
   const langBtn = $("#btnLang");
   if (langBtn) langBtn.addEventListener("click", toggleLang);
+
+  // 报头「广告招牌」：点一下钉子松动→招牌垂落晃动，再点恢复原样
+  const adBox = $("#adBox");
+  if (adBox) {
+    const toggleSign = () => {
+      adBox.classList.toggle("dropped");
+      adBox.setAttribute("aria-pressed", String(adBox.classList.contains("dropped")));
+    };
+    adBox.addEventListener("click", toggleSign);
+    adBox.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSign(); }
+    });
+  }
+
   applyLang();
   syncAlphaBtn();
   syncCnyBtn();

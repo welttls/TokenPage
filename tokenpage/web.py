@@ -148,6 +148,7 @@ def _route_json(r) -> dict:
         "list_prompt": _fmt_price(r.list_prompt),
         "list_completion": _fmt_price(r.list_completion),
         "is_openrouter_deal": r.is_openrouter_deal,
+        "unlimited": bool(r.unlimited),
         "source_url": r.source_url,
     }
 

@@ -10,10 +10,21 @@ from dataclasses import dataclass, field
 
 from tokenpage.config import family_labels, load_models, provider_labels, provider_meta
 from tokenpage.models import QuotaInfo, ZdrInfo
-from tokenpage.quota import effective_completion, effective_prompt
+from tokenpage.quota import effective_completion, effective_prompt, fmt_multiplier
 
 # 路线展示顺序（比价矩阵列顺序）
-ROUTE_ORDER = ["opencode_go", "openrouter", "siliconflow", "opencode_zen", "official"]
+ROUTE_ORDER = [
+    "opencode_go",
+    "openrouter",
+    "siliconflow",
+    "opencode_zen",
+    "official",
+    "anthropic_plan",
+    "openai_plan",
+    "zhipu_plan",
+    "alibaba_plan",
+    "moonshot_plan",
+]
 
 # Claude 补抓模型（Go 无 Claude，来自 Zen / 官方）——与 opencode_zen 保持一致
 CLAUDE_MODELS = {
@@ -47,6 +58,7 @@ class RouteQuote:
     list_completion: float | None = None
     is_openrouter_deal: bool = False       # 是否已并入的 OpenRouter 限时折扣
     source_url: str | None = None          # 该路线官网
+    unlimited: bool = False                # 无明确额度（如 Claude/ChatGPT 订阅）：价格列显示 ♾️
 
     @property
     def price_tags(self) -> list[str]:
@@ -56,7 +68,7 @@ class RouteQuote:
         if self.discount_type == "quota" and self.quota:
             qtag = self.quota.tag
             if not qtag and self.quota.effective_multiplier:
-                qtag = f"额度×{self.quota.effective_multiplier:g}"
+                qtag = f"额度×{fmt_multiplier(self.quota.effective_multiplier)}"
             if qtag:
                 tags.append(qtag)
         if self.deal_tag:
@@ -137,6 +149,7 @@ def _to_route(row: dict) -> RouteQuote:
         raw_prompt=row.get("raw_prompt"),
         raw_completion=row.get("raw_completion"),
         source_url=(meta.get(row["provider"]) or {}).get("url"),
+        unlimited=row.get("discount_type") == "unlimited",
     )
 
 
@@ -284,10 +297,11 @@ def _logical_name(row: dict, models_map: dict) -> str:
                 reverse[sid] = lm
     provider = row["provider"]
     mid = row["model_id"]
-    # opencode_go / opencode_zen / 官方直连（route_type=official，provider 为
-    # anthropic/openai/... 等厂商名）的模型 ID 本身就是逻辑名
+    # opencode_go / opencode_zen / 官方订阅套餐（*_plan）/ 官方直连（route_type=official，
+    # provider 为 anthropic/openai/... 等厂商名）的模型 ID 本身就是逻辑名
     if (
         provider in ("opencode_go", "opencode_zen")
+        or provider.endswith("_plan")
         or row.get("route_type") == "official"
         or mid in station_map
     ):

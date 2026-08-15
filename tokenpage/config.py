@@ -134,6 +134,83 @@ DEFAULT_OFFICIAL: dict = {
     },
 }
 
+# 官方订阅套餐（coding plan）配置。
+# 每个计划折算成「等效每 1M token 价」加进比价矩阵对应模型族下：
+#   等效价(模型 M) = 官方 API 标价(M) ÷ 倍率，倍率 = 套餐月额度价值 ÷ 月费
+# quota_type：
+#   - "tokens"：明确的每月 token 额度（tokens_in/tokens_out）→ 按各模型官方价折算成价值
+#   - "value" ：明确的每月额度价值（如 Qoder Credits × 单价）→ 直接作为价值
+#   - "none"  ：无公开 token 额度（Claude/ChatGPT）→ 不折算数字，仅标 ♾️/宣称倍率
+DEFAULT_PLANS: dict = {
+    "anthropic_plan": {
+        "label": "Claude 订阅",
+        "label_en": "Claude Sub",
+        "url": "https://www.anthropic.com/pricing",
+        "currency": "USD",
+        "family": "claude",
+        "fee": 20.0,
+        "quota_type": "none",
+        "tag": "宣称×5",
+        "models": ["claude-opus-5", "claude-sonnet-5", "claude-sonnet-4-6", "claude-haiku-4-5"],
+        "note": "Claude Pro $20/月：官方宣称「5× free 使用量」，未公布具体 token 额度，故不折算等效价（只显示 ♾️/宣称倍率）。更高档：Max 5× $100、Max 20× $200。",
+        "note_en": "Claude Pro $20/mo: officially '5× free usage', no token quota published, so no equivalent price (shows ♾️/claimed multiplier). Higher tiers: Max 5× $100, Max 20× $200.",
+    },
+    "openai_plan": {
+        "label": "ChatGPT 订阅",
+        "label_en": "ChatGPT Sub",
+        "url": "https://openai.com/chatgpt/pricing",
+        "currency": "USD",
+        "family": "gpt",
+        "fee": 20.0,
+        "quota_type": "none",
+        "tag": "♾️扩展额度",
+        "models": ["gpt-5.6-sol", "gpt-5.5"],
+        "note": "ChatGPT Plus $20/月：官方仅称「更多使用额度」，未公布具体 token 额度，故不折算等效价。Pro $200/月为接近无限额度。",
+        "note_en": "ChatGPT Plus $20/mo: officially 'more usage', no token quota published, so no equivalent price. Pro $200/mo is near-unlimited.",
+    },
+    "zhipu_plan": {
+        "label": "GLM 订阅",
+        "label_en": "GLM Sub",
+        "url": "https://bigmodel.cn/glm-coding",
+        "currency": "CNY",
+        "family": "glm",
+        "fee": 94.4,                       # Lite 连续包月价
+        "quota_type": "tokens",
+        "tokens_in": 250_000_000,          # 每月约 2.8 亿（每周 0.43~0.87 亿 × 4.33，取中值按 90/10 拆）
+        "tokens_out": 30_000_000,
+        "models": ["glm-5.3", "glm-5.2", "glm-5.1"],
+        "note": "GLM Coding Plan Lite ¥94.4/月（连续包月）：每周 10,000 积分 → 约 0.43~0.87 亿 tokens/周（GLM-5.3，90.9% 缓存命中）。取区间中值折算，可按需在 plans.json 调整。更高档：Pro ¥538（6×）、Max ¥1078（14×）。",
+        "note_en": "GLM Coding Plan Lite ¥94.4/mo: 10k credits/week → ~0.43-0.87×10⁸ tokens/wk (GLM-5.3, 90.9% cache hit). Mid-range estimate; adjust in plans.json. Higher: Pro ¥538 (6×), Max ¥1078 (14×).",
+    },
+    "alibaba_plan": {
+        "label": "通义订阅",
+        "label_en": "Qoder Sub",
+        "url": "https://help.aliyun.com/zh/lingma/product-overview/billing-description",
+        "currency": "CNY",
+        "family": "qwen",
+        "fee": 59.0,                        # 个人专业版 Pro
+        "quota_type": "value",
+        "monthly_quota": 80.0,             # 2,000 Credits × ¥0.04（资源包单价 ¥40/1,000）
+        "models": ["qwen3.8-max", "qwen3.7-max", "qwen3.7-plus"],
+        "note": "Qoder CN（通义灵码）个人专业版 ¥59/月：2,000 Credits/月，按资源包单价 ¥40/1,000 Credits 折算价值 ¥80。更高档：Pro+ ¥169（6,000 Credits）。",
+        "note_en": "Qoder CN (Tongyi Lingma) Pro ¥59/mo: 2,000 credits/mo, valued ¥80 (resource pack ¥40/1,000 credits). Higher: Pro+ ¥169 (6,000 credits).",
+    },
+    "moonshot_plan": {
+        "label": "Kimi 订阅",
+        "label_en": "Kimi Sub",
+        "url": "https://www.kimi.com/code",
+        "currency": "CNY",
+        "family": "kimi",
+        "fee": 79.0,                        # Moderato 连续包月价
+        "quota_type": "tokens",
+        "tokens_in": 27_000_000,           # 估算值：官网未公布具体 token 数（仅称每周更新使用额度）
+        "tokens_out": 3_000_000,
+        "models": ["kimi-k3", "kimi-k2.7-code", "kimi-k2.6"],
+        "note": "Kimi Code Plan Moderato ¥79/月：官网未公布具体 token 额度（仅称每周更新使用额度），此值按 K3 官方价折算的估算（约 10× 价值），请以 plans.json 为准调整。更高档：Allegretto ¥199（4×）、Allegro ¥699（10×）。",
+        "note_en": "Kimi Code Plan Moderato ¥79/mo: no official token quota published (weekly refreshed usage); estimate (~10× value at K3 list prices) — adjust in plans.json. Higher: Allegretto ¥199 (4×), Allegro ¥699 (10×).",
+    },
+}
+
 
 def ensure_config() -> None:
     """首次运行时在 ~/.tokenpage 生成默认配置文件。"""
@@ -144,6 +221,7 @@ def ensure_config() -> None:
         ("fx.json", DEFAULT_FX),
         ("go.json", DEFAULT_GO),
         ("official.json", DEFAULT_OFFICIAL),
+        ("plans.json", DEFAULT_PLANS),
     ):
         p = DATA_DIR / name
         if not p.exists():
@@ -194,6 +272,11 @@ def load_official() -> dict:
     return _load("official.json", DEFAULT_OFFICIAL)
 
 
+def load_plans() -> dict:
+    """加载官方订阅套餐配置（coding plan，如 Claude/GLM/Kimi 订阅）。"""
+    return _load("plans.json", DEFAULT_PLANS)
+
+
 def official_meta_map() -> dict[str, dict[str, str]]:
     """返回 {provider: {model_id: family}}，仅保留有效条目。"""
     return load_official()
@@ -214,6 +297,11 @@ def provider_labels() -> dict[str, str]:
         "moonshot": "Moonshot",
         "zhipu": "智谱",
         "alibaba": "阿里云",
+        "anthropic_plan": "Claude 订阅",
+        "openai_plan": "ChatGPT 订阅",
+        "zhipu_plan": "GLM 订阅",
+        "alibaba_plan": "通义订阅",
+        "moonshot_plan": "Kimi 订阅",
     }
 
 
@@ -291,6 +379,36 @@ def provider_meta() -> dict[str, dict]:
             "note": "阿里云百炼官方 API。静态基准价，非实时抓取，可在 official.json 覆盖。",
             "note_en": "Alibaba Cloud Bailian official API. Static base prices (not live-fetched); can be overridden in official.json.",
             "route_type": "official",
+        },
+        "anthropic_plan": {
+            "url": "https://www.anthropic.com/pricing",
+            "note": "Claude 订阅：官方未公布 token 额度，不折算等效价，仅标 ♾️/宣称倍率（Claude Pro $20、Max $100/$200）。",
+            "note_en": "Claude subscription: no token quota published, no equivalent price (♾️/claimed multiplier). Claude Pro $20, Max $100/$200.",
+            "route_type": "subscription",
+        },
+        "openai_plan": {
+            "url": "https://openai.com/chatgpt/pricing",
+            "note": "ChatGPT 订阅：官方未公布 token 额度，不折算等效价（Plus $20、Pro $200 近无限）。",
+            "note_en": "ChatGPT subscription: no token quota published, no equivalent price (Plus $20; Pro $200 near-unlimited).",
+            "route_type": "subscription",
+        },
+        "zhipu_plan": {
+            "url": "https://bigmodel.cn/glm-coding",
+            "note": "GLM Coding Plan：有明确积分→token 额度，折算等效价 = 官方 API 标价 ÷ 倍率（Lite ¥94.4/月）。",
+            "note_en": "GLM Coding Plan: explicit credit→token quota, equivalent = official API list ÷ multiplier (Lite ¥94.4/mo).",
+            "route_type": "subscription",
+        },
+        "alibaba_plan": {
+            "url": "https://help.aliyun.com/zh/lingma/product-overview/billing-description",
+            "note": "Qoder CN（通义灵码）个人专业版：明确 Credits 额度，折算等效价 = 官方 API 标价 ÷ 倍率（¥59/月）。",
+            "note_en": "Qoder CN (Tongyi Lingma) Pro: explicit Credits quota, equivalent = official API list ÷ multiplier (¥59/mo).",
+            "route_type": "subscription",
+        },
+        "moonshot_plan": {
+            "url": "https://www.kimi.com/code",
+            "note": "Kimi Code Plan：有每周使用额度，折算等效价 = 官方 API 标价 ÷ 倍率（Moderato ¥79/月，估算）。",
+            "note_en": "Kimi Code Plan: weekly refreshed usage quota, equivalent = official API list ÷ multiplier (Moderato ¥79/mo, estimate).",
+            "route_type": "subscription",
         },
     }
 

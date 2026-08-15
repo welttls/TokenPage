@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from tokenpage.fetchers import (
+    coding_plans,
     deepseek,
     fx,
     official,
@@ -24,6 +25,7 @@ FETCHERS = {
     "opencode_zen": opencode_zen.fetch,
     "deepseek": deepseek.fetch,
     "official": official.fetch,
+    "coding_plans": coding_plans.fetch,
 }
 
 

@@ -68,7 +68,9 @@ html, body {
 }
 .masthead-mid {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 18px; padding: 16px 20px 12px; flex-wrap: wrap;
+  gap: 18px; padding: 16px 20px 12px;
+  /* nowrap：招牌与品牌始终同一行（英文版品牌/招牌较宽，wrap 会把招牌挤到左侧） */
+  flex-wrap: nowrap;
 }
 .brand { display: flex; align-items: center; gap: 16px; }
 .logo {
@@ -86,17 +88,72 @@ html, body {
 .brand h1 span { color: var(--accent); }
 .tagline { color: var(--ink-soft); font-size: 13px; margin-top: 6px; letter-spacing: .08em; }
 
-/* 报头右侧的「广告框」 */
+/* 报头右侧的「广告招牌」：铁钉 + 麻绳，像酒馆招牌一样挂在墙上 */
+.masthead-ad { position: relative; }
 .masthead-ad .ad-box {
+  position: relative; z-index: 5;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  border: 2px solid var(--ink-soft); padding: 10px 18px;
-  background: var(--panel-2);
+  border: 2px solid var(--ink-soft); padding: 10px 20px 12px;
+  /* 限制招牌宽度：英文文案较长时保持紧凑，避免撑太宽把行挤爆 */
+  max-width: 240px;
+  background:
+    repeating-linear-gradient(90deg, rgba(120,96,40,.05) 0 2px, transparent 2px 18px),
+    var(--panel-2);
+  border-radius: 3px 3px 10px 10px;
   box-shadow: 3px 3px 0 rgba(120, 96, 40, .3);
   transform: rotate(.6deg);
+  transform-origin: top center;
+  cursor: pointer; user-select: none;
+  transition: transform .32s cubic-bezier(.34,1.56,.64,1), box-shadow .32s;
+}
+.masthead-ad .ad-box:hover { box-shadow: 3px 6px 0 rgba(120,96,40,.35); }
+/* 麻绳：从招牌顶边垂到钉子 */
+.masthead-ad .ad-box::before {
+  content: "";
+  position: absolute; top: -20px; left: 50%;
+  width: 3px; height: 20px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(180deg, #7a5f2e 0 3px, #a68d4e 3px 6px);
+  border-radius: 2px;
+}
+/* 铁钉：圆头钉帽，招牌挂在它上 */
+.masthead-ad .ad-box::after {
+  content: "";
+  position: absolute; top: -30px; left: 50%;
+  width: 13px; height: 13px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #e8d69a, #7a5f2e 55%, #36290f);
+  border: 1px solid #2e2412;
+  box-shadow: 0 2px 3px rgba(46,36,18,.45), inset 0 -3px 4px rgba(46,36,18,.55);
 }
 .ad-tag { font-size: 10px; letter-spacing: .3em; color: var(--ink-dim); }
 .ad-line { font-size: 18px; font-weight: 900; letter-spacing: .12em; color: var(--accent); }
+/* 英文版招牌文案较长：略缩字号/字距，保持紧凑两行，不把招牌撑高 */
+html[lang="en"] .masthead-ad .ad-line {
+  font-size: 15px;
+  letter-spacing: .06em;
+}
 .ad-sub { font-size: 11px; color: var(--ink-soft); }
+
+/* 钉子松动：招牌垂落、来回晃动（像快要掉下来）；再点一次恢复 */
+.masthead-ad .ad-box.dropped {
+  animation:
+    sign-fall .45s cubic-bezier(.45,.05,.4,1.15) both,
+    sign-swing 1.25s ease-in-out .45s infinite;
+  box-shadow: 4px 10px 10px rgba(120,96,40,.42);
+}
+@keyframes sign-fall {
+  from { transform: translateY(0) rotate(.6deg); }
+  to   { transform: translateY(10px) rotate(-7deg); }
+}
+@keyframes sign-swing {
+  0%, 100% { transform: translateY(10px) rotate(-7deg); }
+  20%      { transform: translateY(13px) rotate(6deg); }
+  40%      { transform: translateY(14px) rotate(-8deg); }
+  60%      { transform: translateY(12px) rotate(9deg); }
+  80%      { transform: translateY(11px) rotate(-6deg); }
+}
 
 .masthead-rule {
   display: flex; align-items: center; gap: 12px;
@@ -135,6 +192,7 @@ html, body {
 .badge.opencode_go  { color: var(--green); background: var(--green-soft); }
 .badge.opencode_zen { color: var(--green); background: var(--green-soft); }
 .badge.official     { color: var(--ink-soft); background: rgba(93, 76, 40, .10); }
+.badge.plan         { color: #0f766e; background: rgba(15, 118, 110, .12); }
 .badge.offpeak      { color: var(--green); background: var(--green-soft); }
 .badge.peak         { color: var(--accent); background: var(--accent-soft); }
 

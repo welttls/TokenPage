@@ -77,8 +77,19 @@ def effective_completion(quote: PriceQuote) -> float | None:
     return quote.completion_usd_per_1m
 
 
+def fmt_multiplier(mult: float | None) -> str:
+    """倍率展示：34.5 → '34'、10.6 → '10.6'、1.36 → '1.36'。"""
+    if not mult:
+        return ""
+    if mult >= 100:
+        return f"{mult:.0f}"
+    if mult >= 10:
+        return f"{mult:.1f}"
+    return f"{round(mult, 2):g}"
+
+
 def quota_label(quote: PriceQuote) -> str:
     """订阅路线的折扣标签。"""
     if quote.quota and quote.quota.effective_multiplier:
-        return f"额度×{quote.quota.effective_multiplier:g}"
+        return f"额度×{fmt_multiplier(quote.quota.effective_multiplier)}"
     return ""

@@ -29,6 +29,11 @@ ROUTE_HEADER = {
     "siliconflow": "硅基流动",
     "opencode_zen": "OpenCode Zen",
     "official": "官方直连",
+    "anthropic_plan": "Claude 订阅",
+    "openai_plan": "ChatGPT 订阅",
+    "zhipu_plan": "GLM 订阅",
+    "alibaba_plan": "通义订阅",
+    "moonshot_plan": "Kimi 订阅",
 }
 
 
@@ -189,6 +194,8 @@ def _plain_tags(r) -> list[str]:
         tags.append("offpeak")
     if r.discount_type == "quota" and r.quota and r.quota.effective_multiplier:
         tags.append(f"quota_x{r.quota.effective_multiplier:g}")
+    if r.discount_type == "unlimited":
+        tags.append("unlimited")
     if r.deal_tag:
         tags.append("free" if "免费" in r.deal_tag else "promo")
     if r.zdr:
