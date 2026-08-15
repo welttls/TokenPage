@@ -21,7 +21,7 @@ import logging
 
 from tokenpage.config import load_fx, load_plans, provider_labels
 from tokenpage.fetchers.official import _merged as official_merged
-from tokenpage.models import PriceQuote, QuotaInfo, ROUTE_SUBSCRIPTION
+from tokenpage.models import PriceQuote, QuotaInfo, ROUTE_SUBSCRIPTION, ZdrInfo
 from tokenpage.quota import fmt_multiplier
 
 log = logging.getLogger("tokenpage")
@@ -60,9 +60,26 @@ def fetch() -> list[PriceQuote]:
         qtype = plan.get("quota_type", "none")
         models = plan.get("models") or []
         op = _OFFICIAL_PROVIDER.get(key)
+        zdr = (
+            ZdrInfo(used_for_training=False, retention_days=0)
+            if plan.get("zdr") else None
+        )
 
-        for mid in models:
-            raw = ((official.get(op) or {}).get(mid) or {}) if op else {}
+        for entry in models:
+            # models 条目：字符串（沿用 plan 的 family）或 {"id":..., "family":...}（跨厂商订阅如 Ollama）
+            if isinstance(entry, dict):
+                mid = entry.get("id")
+                mfamily = entry.get("family") or family
+            else:
+                mid = entry
+                mfamily = family
+            if not mid:
+                continue
+            # 跨厂商订阅（如 Ollama）：模型条目可直接带列表价（prompt/completion，USD）
+            if isinstance(entry, dict) and isinstance(entry.get("prompt"), (int, float)):
+                raw = entry
+            else:
+                raw = ((official.get(op) or {}).get(mid) or {}) if op else {}
             if qtype in ("tokens", "value"):
                 if not raw.get("prompt") or not raw.get("completion"):
                     log.warning("coding plan %s：未在 official 官方价中找到模型 %s，已跳过", key, mid)
@@ -77,12 +94,15 @@ def fetch() -> list[PriceQuote]:
                 else:  # value：plans.json 直接给月额度价值（原币种）
                     qv_usd = _to_usd(cur, plan.get("monthly_quota"), cny)
                 mult = (qv_usd / fee_usd) if fee_usd and qv_usd else None
+                est = "·估算" if plan.get("estimate") else ""
+                # 标签：套餐显式 tag（如 Claude「宣称×5」）优先，否则自动「额度×N」
+                qtag = f"{plan['tag']}{est}" if plan.get("tag") else (f"额度×{fmt_multiplier(mult)}{est}" if mult else None)
                 quota = QuotaInfo(
                     monthly_fee=fee_usd,
                     monthly_quota=qv_usd,
                     window=plan.get("window"),
-                    note=f"{plan.get('fee')} {cur}/月 → {qv_usd:.2f}$ 额度（折算）",
-                    tag=f"额度×{fmt_multiplier(mult)}" if mult else None,
+                    note=f"{plan.get('fee')} {cur}/月 → {qv_usd:.2f}$ 额度（{'估算' if plan.get('estimate') else '折算'}）",
+                    tag=qtag,
                 )
                 quotes.append(
                     PriceQuote(
@@ -90,7 +110,7 @@ def fetch() -> list[PriceQuote]:
                         provider_label=label,
                         model_id=mid,
                         route_type=ROUTE_SUBSCRIPTION,
-                        family=family,
+                        family=mfamily,
                         prompt_usd_per_1m=_to_usd(o_cur, raw.get("prompt"), cny),
                         completion_usd_per_1m=_to_usd(o_cur, raw.get("completion"), cny),
                         cache_read_usd_per_1m=_to_usd(o_cur, raw.get("cache_read"), cny),
@@ -99,6 +119,7 @@ def fetch() -> list[PriceQuote]:
                         raw_completion=_to_usd(o_cur, raw.get("completion"), cny),
                         quota=quota,
                         discount_type="quota",
+                        zdr=zdr,
                     )
                 )
             else:  # "none"：无明确额度 → 不折算数字
@@ -108,12 +129,13 @@ def fetch() -> list[PriceQuote]:
                         provider_label=label,
                         model_id=mid,
                         route_type=ROUTE_SUBSCRIPTION,
-                        family=family,
+                        family=mfamily,
                         prompt_usd_per_1m=None,
                         completion_usd_per_1m=None,
                         currency="USD",
                         deal_tag=plan.get("tag"),
                         discount_type="unlimited",
+                        zdr=zdr,
                     )
                 )
     return quotes

@@ -2,6 +2,24 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
+## v0.5.0（2026-08-15）
+
+### 新增
+- **最新 Qwen3.8-27B 上架**：新增 `qwen3.8-27b` 模型（OpenRouter `qwen/qwen3.8-27b`，输入 $0.45 / 输出 $3.20 / 1M，上下文 262K），随每日抓取自动取价（阿里云百炼官方页尚未收录，故暂无「阿里云」官方列）
+- **Ollama Cloud 订阅路线（估算等效价）**：新增 `Ollama 云` 订阅路线，覆盖 Ollama Cloud 托管的开源模型（GLM-5.2/5.1、DeepSeek V4 Flash/Pro、Kimi K3/K2.7-Code/K2.6、MiniMax M2.7/M3）
+  - Pro $20/月（宣称 50× 免费额度）、Max $100/月（5× Pro，新订阅暂停）；Ollama 按「模型用量等级 1~4」计额度、未公布 token 数 → 等效价为**估算**（假设 Pro ≈ $60 云额度价值 → 3×，标价取 OpenRouter 同模型价），标签标「·估算」，可在 plans.json 调整
+  - ZDR 标注：Ollama 承诺不记录、不训练（0 天保留）
+- **Claude 订阅（按宣称 5× 折算估算等效价）**：Claude Pro $20/月 官方仅宣称「5× free 使用量」、未公布 token 额度 → 由原来的 ♾️ 改为**估算等效价**（假设 $20 ≈ $100 云额度价值 → 5×，= 官方 API 标价 ÷ 5），标签保留「宣称×5」并标注「·估算」
+
+### 优化
+- 订阅套餐配置支持「跨厂商」模型列表（`models` 条目可为 `{"id":..., "family":...}`），套餐本身不必绑定单一模型族（Ollama Cloud 使用）
+- 订阅套餐模型条目可自带列表价（prompt/completion）与「估算」标记，供无官方 API 直连的多厂商订阅（如 Ollama）折算等效价
+
+### 修复
+- **DeepSeek V4 Pro 路由修正**：`models.json` 中 `deepseek-v4-pro` 的 OpenRouter 映射从错误的 canonical slug `deepseek/deepseek-v4-pro-20260813` 改为真实模型 ID `deepseek/deepseek-v4-pro-0813`，消除矩阵中多余的 `deepseek-v4-pro-0813` 模型行（此前 flash 精确命中显示为 `deepseek-v4-flash`、pro 模糊命中残留日期后缀，造成「flash + pro + pro0813」混排）
+
+---
+
 ## v0.4.0（2026-08-15）
 
 ### 新增

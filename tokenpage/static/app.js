@@ -113,7 +113,8 @@ const I18N = {
     free: "🆓 免费",
     route_site: "官网：",
     tip_quota: "订阅/套餐额度折算：等效价 = 官方标价 ÷ 额度倍率（月费对应的额度价值）。按全额度消耗计算（额度用不完实际更贵）",
-    tip_claimed: "官方未公布具体 token 额度，按宣称的 N× 使用量估算，不折算等效价",
+    tip_claimed: "官方未公布具体 token 额度，等效价按「宣称 N×」估算（= 标价 ÷ N），仅数量级参考",
+    tip_estimate: "※ 该等效价为估算（非官方公布口径），仅数量级参考",
     tip_unlimited: "官方未公布具体 token 额度，为无限/扩展额度，无法折算等效价",
     tip_promo: "OpenCode Go 限时额度促销（2x usage）：该模型当月使用额度翻倍",
     tip_deal: "OpenRouter 限时折扣：{pct}% off，显示价已为折扣后价",
@@ -196,7 +197,8 @@ const I18N = {
     free: "🆓 Free",
     route_site: "Site: ",
     tip_quota: "Subscription plan quota: equiv price = list price ÷ multiplier (value of the monthly fee). Assumes FULL monthly quota usage; if unused, the real cost is higher.",
-    tip_claimed: "No token quota published; estimated from claimed N× usage, no equivalent price.",
+    tip_claimed: "No token quota published; equivalent price estimated by claimed N× (= list ÷ N), order-of-magnitude only",
+    tip_estimate: "※ Estimated equivalent price (not officially published), order-of-magnitude reference only",
     tip_unlimited: "No token quota published; unlimited/extended usage, no equivalent price.",
     tip_promo: "OpenCode Go limited-time quota promo (2x usage): doubled monthly quota this month",
     tip_deal: "OpenRouter limited-time deal: {pct}% off, shown price is already discounted",
@@ -250,6 +252,7 @@ const PROVIDER_LABEL_EN = {
   zhipu_plan: "GLM Sub",
   alibaba_plan: "Qoder Sub",
   moonshot_plan: "Kimi Sub",
+  ollama_plan: "Ollama Cloud",
 };
 function plabel(provider, zhLabel) {
   if (lang !== "en") return zhLabel;
@@ -268,6 +271,7 @@ function translateTag(tag) {
   s = s.replace(/宣称×/g, "Claimed×");
   s = s.replace(/♾️无限/g, "♾️Unlimited");
   s = s.replace(/♾️扩展额度/g, "♾️Extended");
+  s = s.replace(/估算/g, "est.");
   return s;
 }
 
@@ -329,6 +333,7 @@ const ROUTE_CLASS = {
   zhipu_plan: "plan",
   alibaba_plan: "plan",
   moonshot_plan: "plan",
+  ollama_plan: "plan",
 };
 
 // 折叠/排序/置顶状态（纯本地 localStorage）
@@ -443,24 +448,21 @@ function saveUI() {
 }
 
 function tagHelp(tag) {
-  if (tag.startsWith("额度"))
-    return t("tip_quota");
-  if (tag.includes("限时×"))
-    return t("tip_promo");
-  if (tag.startsWith("宣称"))
-    return t("tip_claimed");
-  if (tag.startsWith("♾️"))
-    return t("tip_unlimited");
-  if (tag.startsWith("🎁")) {
+  let help = "";
+  if (tag.startsWith("额度")) help = t("tip_quota");
+  else if (tag.startsWith("宣称")) help = t("tip_claimed");
+  else if (tag.includes("限时×")) help = t("tip_promo");
+  else if (tag.startsWith("♾️")) help = t("tip_unlimited");
+  else if (tag.startsWith("🎁")) {
     const m = tag.match(/(\d+)%off/);
-    return t("tip_deal", { pct: m ? m[1] : "?" });
-  }
-  if (tag === "🔒ZDR") return t("tip_zdr");
-  if (/^\d+d$/.test(tag)) return t("tip_retention", { n: tag.slice(0, -1) });
-  if (tag === "阶梯") return t("tip_tiered");
-  if (tag === "🆓限免") return t("tip_free");
-  if (tag === "🌙谷时") return t("tip_offpeak");
-  return "";
+    help = t("tip_deal", { pct: m ? m[1] : "?" });
+  } else if (tag === "🔒ZDR") help = t("tip_zdr");
+  else if (/^\d+d$/.test(tag)) help = t("tip_retention", { n: tag.slice(0, -1) });
+  else if (tag === "阶梯") help = t("tip_tiered");
+  else if (tag === "🆓限免") help = t("tip_free");
+  else if (tag === "🌙谷时") help = t("tip_offpeak");
+  if (help && tag.includes("估算")) help += "\n" + t("tip_estimate");
+  return help;
 }
 
 function renderTags(tags) {

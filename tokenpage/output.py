@@ -34,6 +34,7 @@ ROUTE_HEADER = {
     "zhipu_plan": "GLM 订阅",
     "alibaba_plan": "通义订阅",
     "moonshot_plan": "Kimi 订阅",
+    "ollama_plan": "Ollama 云",
 }
 
 

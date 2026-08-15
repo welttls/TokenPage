@@ -24,6 +24,7 @@ ROUTE_ORDER = [
     "zhipu_plan",
     "alibaba_plan",
     "moonshot_plan",
+    "ollama_plan",
 ]
 
 # Claude 补抓模型（Go 无 Claude，来自 Zen / 官方）——与 opencode_zen 保持一致

@@ -41,7 +41,7 @@ DEFAULT_MODELS: dict = {
         },
         "deepseek-v4-pro": {
             "family": "deepseek",
-            "openrouter": "deepseek/deepseek-v4-pro-20260813",
+            "openrouter": "deepseek/deepseek-v4-pro-0813",
             "siliconflow": "deepseek-ai/DeepSeek-V4-Pro",
         },
         "glm-5.3": {"family": "glm", "openrouter": "z-ai/glm-5.3", "siliconflow": "zai-org/GLM-5.3"},
@@ -51,6 +51,7 @@ DEFAULT_MODELS: dict = {
         "kimi-k2.7-code": {"family": "kimi", "openrouter": "moonshotai/kimi-k2.7-code", "siliconflow": "moonshotai/Kimi-K2.7-Code"},
         "kimi-k2.6": {"family": "kimi", "openrouter": "moonshotai/kimi-k2.6", "siliconflow": "moonshotai/Kimi-K2.6"},
         "qwen3.8-max": {"family": "qwen", "openrouter": "qwen/qwen3.8-max"},
+        "qwen3.8-27b": {"family": "qwen", "openrouter": "qwen/qwen3.8-27b"},
         "qwen3.7-max": {"family": "qwen", "openrouter": "qwen/qwen3.7-max"},
         "qwen3.7-plus": {"family": "qwen", "openrouter": "qwen/qwen3.7-plus"},
         "qwen3.6-plus": {"family": "qwen", "openrouter": "qwen/qwen3.6-plus"},
@@ -149,11 +150,13 @@ DEFAULT_PLANS: dict = {
         "currency": "USD",
         "family": "claude",
         "fee": 20.0,
-        "quota_type": "none",
-        "tag": "宣称×5",
+        "quota_type": "value",
+        "monthly_quota": 100.0,        # 估算：按官方「宣称 5×」折算 → 假设 $20 ≈ $100 云额度价值（×5）
+        "estimate": True,              # 估算标记：标签/等效价加「估算」
+        "tag": "宣称×5",               # 保留宣称口径，作为标签基础（显示为 宣称×5·估算）
         "models": ["claude-opus-5", "claude-sonnet-5", "claude-sonnet-4-6", "claude-haiku-4-5"],
-        "note": "Claude Pro $20/月：官方宣称「5× free 使用量」，未公布具体 token 额度，故不折算等效价（只显示 ♾️/宣称倍率）。更高档：Max 5× $100、Max 20× $200。",
-        "note_en": "Claude Pro $20/mo: officially '5× free usage', no token quota published, so no equivalent price (shows ♾️/claimed multiplier). Higher tiers: Max 5× $100, Max 20× $200.",
+        "note": "Claude Pro $20/月：官方宣称「5× free 使用量」但未公布 token 额度 → 等效价按「宣称 5×」估算（假设 $20 ≈ $100 云额度价值，= 标价 ÷ 5），仅数量级参考。更高档：Max 5× $100、Max 20× $200。",
+        "note_en": "Claude Pro $20/mo: officially '5× free usage' but no token quota published → equivalent price estimated by claimed 5× (assumes $20 ≈ $100 cloud value, = list ÷ 5), order-of-magnitude only. Higher tiers: Max 5× $100, Max 20× $200.",
     },
     "openai_plan": {
         "label": "ChatGPT 订阅",
@@ -209,6 +212,31 @@ DEFAULT_PLANS: dict = {
         "note": "Kimi Code Plan Moderato ¥79/月：官网未公布具体 token 额度（仅称每周更新使用额度），此值按 K3 官方价折算的估算（约 10× 价值），请以 plans.json 为准调整。更高档：Allegretto ¥199（4×）、Allegro ¥699（10×）。",
         "note_en": "Kimi Code Plan Moderato ¥79/mo: no official token quota published (weekly refreshed usage); estimate (~10× value at K3 list prices) — adjust in plans.json. Higher: Allegretto ¥199 (4×), Allegro ¥699 (10×).",
     },
+    "ollama_plan": {
+        "label": "Ollama 云",
+        "label_en": "Ollama Cloud",
+        "url": "https://ollama.com/pricing",
+        "currency": "USD",
+        "family": "",                       # 跨厂商：模型各自带 family（见 models 内 dict 条目）
+        "fee": 20.0,                        # Pro 月费；Max $100/月（新订阅暂停）
+        "quota_type": "value",
+        "monthly_quota": 60.0,              # 估算：假设 Pro $20 ≈ $60 云额度价值（≈3×；Ollama 未公布 token 额度）
+        "estimate": True,                    # 估算标记：等效价/标签加「估算」
+        "zdr": True,
+        "models": [
+            {"id": "glm-5.2", "family": "glm", "prompt": 0.49, "completion": 1.54},
+            {"id": "glm-5.1", "family": "glm", "prompt": 0.966, "completion": 3.036},
+            {"id": "deepseek-v4-flash", "family": "deepseek", "prompt": 0.14, "completion": 0.28},
+            {"id": "deepseek-v4-pro", "family": "deepseek", "prompt": 0.435, "completion": 0.87},
+            {"id": "kimi-k3", "family": "kimi", "prompt": 3.00, "completion": 15.00},
+            {"id": "kimi-k2.7-code", "family": "kimi", "prompt": 0.71, "completion": 3.50},
+            {"id": "kimi-k2.6", "family": "kimi", "prompt": 0.65, "completion": 3.41},
+            {"id": "minimax-m2.7", "family": "minimax", "prompt": 0.30, "completion": 1.20},
+            {"id": "minimax-m3", "family": "minimax", "prompt": 0.30, "completion": 1.20},
+        ],
+        "note": "Ollama Cloud 订阅：Pro $20/月（宣称 50× 免费）、Max $100/月（5× Pro，新订阅暂停）。Ollama 按模型「用量等级 1~4」计额度、未公布 token 数，故等效价为估算：假设 Pro ≈ $60 云额度价值（≈3×），标价取 OpenRouter 同模型价；重型模型实际额度更少，仅供参考，可在 plans.json 调整。ZDR：不记录、不训练。",
+        "note_en": "Ollama Cloud sub: Pro $20/mo (claimed 50× Free), Max $100/mo (5× Pro, new subs paused). No token quota published (metered by model 'usage level 1-4') → equivalent price is an ESTIMATE: assumes Pro ≈ $60 cloud value (~3×), list prices from OpenRouter; heavy models get fewer tokens. Adjustable in plans.json. ZDR: no logging, no training.",
+    },
 }
 
 # Web 用户偏好默认值（~/.tokenpage/user_prefs.json）。
@@ -222,7 +250,6 @@ DEFAULT_USER_PREFS: dict = {
     "alpha": 0,           # 字母排序：0 默认 / 1 A-Z / 2 Z-A
     "cny": False,         # 币种：False=美元主显 / True=人民币主显
 }
-
 
 def ensure_config() -> None:
     """首次运行时在 ~/.tokenpage 生成默认配置文件。"""
@@ -326,6 +353,7 @@ def provider_labels() -> dict[str, str]:
         "zhipu_plan": "GLM 订阅",
         "alibaba_plan": "通义订阅",
         "moonshot_plan": "Kimi 订阅",
+        "ollama_plan": "Ollama 云",
     }
 
 
@@ -406,8 +434,8 @@ def provider_meta() -> dict[str, dict]:
         },
         "anthropic_plan": {
             "url": "https://www.anthropic.com/pricing",
-            "note": "Claude 订阅：官方未公布 token 额度，不折算等效价，仅标 ♾️/宣称倍率（Claude Pro $20、Max $100/$200）。",
-            "note_en": "Claude subscription: no token quota published, no equivalent price (♾️/claimed multiplier). Claude Pro $20, Max $100/$200.",
+            "note": "Claude 订阅：官方未公布 token 额度，等效价按「宣称 5×」估算（$20 ≈ $100 云额度价值 → 标价 ÷ 5），仅数量级参考（Claude Pro $20、Max $100/$200）。",
+            "note_en": "Claude subscription: no token quota published; equivalent price estimated by claimed 5× ($20 ≈ $100 value → list ÷ 5), order-of-magnitude only (Pro $20, Max $100/$200).",
             "route_type": "subscription",
         },
         "openai_plan": {
@@ -432,6 +460,12 @@ def provider_meta() -> dict[str, dict]:
             "url": "https://www.kimi.com/code",
             "note": "Kimi Code Plan：有每周使用额度，折算等效价 = 官方 API 标价 ÷ 倍率（Moderato ¥79/月，估算）。",
             "note_en": "Kimi Code Plan: weekly refreshed usage quota, equivalent = official API list ÷ multiplier (Moderato ¥79/mo, estimate).",
+            "route_type": "subscription",
+        },
+        "ollama_plan": {
+            "url": "https://ollama.com/pricing",
+            "note": "Ollama Cloud 订阅：Pro $20/月（宣称 50× 免费）、Max $100/月（5× Pro，新订阅暂停）。Ollama 未公布 token 额度（按模型用量等级 1~4 计），等效价为估算（假设 Pro ≈ $60 云额度价值 → 3×，标价取 OpenRouter）；ZDR（不记录、不训练）。",
+            "note_en": "Ollama Cloud sub: Pro $20/mo (claimed 50× Free), Max $100/mo (5× Pro, new subs paused). No token quota published (usage level 1-4) → equivalent is an estimate (~$60 value → 3×, list from OpenRouter); ZDR (no logging, no training).",
             "route_type": "subscription",
         },
     }
