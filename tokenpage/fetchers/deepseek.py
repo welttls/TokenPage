@@ -22,12 +22,12 @@ EFFECTIVE_FROM = "2026-08-16T16:00:00+00:00"
 # - pre  ：峰谷生效前固定价（含缓存命中输入价 cache_read）
 # - peak ：峰谷生效后的 PEAK 基准价（谷时半价由 pricing.apply_offpeak 折算）
 OFFICIAL_PRICING: dict[str, dict] = {
-    "deepseek-v4-flash": {
+    "deepseek-v4-flash-0731": {
         "pre": {"prompt": 0.14, "completion": 0.28, "cache_read": 0.0028},
         "peak": {"prompt": 0.44, "completion": 1.32, "cache_read": 0.014},
         "context": 1_000_000, "tools": True, "family": "deepseek",
     },
-    "deepseek-v4-pro": {
+    "deepseek-v4-pro-0813": {
         "pre": {"prompt": 0.435, "completion": 0.87, "cache_read": 0.003625},
         "peak": {"prompt": 1.32, "completion": 3.96, "cache_read": 0.044},
         "context": 1_000_000, "tools": True, "family": "deepseek",

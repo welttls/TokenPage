@@ -34,15 +34,29 @@ DEFAULT_MODELS: dict = {
     },
     # 逻辑模型（Go 页清单）→ 各站 ID。family 必填；openrouter/siliconflow 可缺省。
     "models": {
-        "deepseek-v4-flash": {
+        # DeepSeek V4 四个快照（OpenRouter 实体）显式带日期；latest 档带
+        # go/zen 站 ID（Go/Zen 文档模型 ID 不带日期，需经 _logical_name 反查回退）
+        "deepseek-v4-flash-0423": {
+            "family": "deepseek",
+            "openrouter": "deepseek/deepseek-v4-flash",
+        },
+        "deepseek-v4-flash-0731": {
             "family": "deepseek",
             "openrouter": "deepseek/deepseek-v4-flash-0731",
             "siliconflow": "deepseek-ai/DeepSeek-V4-Flash",
+            "go": "deepseek-v4-flash",
+            "zen": "deepseek-v4-flash",
         },
-        "deepseek-v4-pro": {
+        "deepseek-v4-pro-0423": {
+            "family": "deepseek",
+            "openrouter": "deepseek/deepseek-v4-pro",
+        },
+        "deepseek-v4-pro-0813": {
             "family": "deepseek",
             "openrouter": "deepseek/deepseek-v4-pro-0813",
             "siliconflow": "deepseek-ai/DeepSeek-V4-Pro",
+            "go": "deepseek-v4-pro",
+            "zen": "deepseek-v4-pro",
         },
         "glm-5.3": {"family": "glm", "openrouter": "z-ai/glm-5.3", "siliconflow": "zai-org/GLM-5.3"},
         "glm-5.2": {"family": "glm", "openrouter": "z-ai/glm-5.2", "siliconflow": "zai-org/GLM-5.2"},
@@ -101,8 +115,8 @@ DEFAULT_GO: dict = {
 # 官方 API 直连模型 → family 映射（official 抓取器使用；可手动覆盖）
 DEFAULT_OFFICIAL: dict = {
     "deepseek": {
-        "deepseek-v4-pro": "deepseek",
-        "deepseek-v4-flash": "deepseek",
+        "deepseek-v4-pro-0813": "deepseek",
+        "deepseek-v4-flash-0731": "deepseek",
     },
     "anthropic": {
         "claude-opus-5": "claude",
@@ -226,8 +240,8 @@ DEFAULT_PLANS: dict = {
         "models": [
             {"id": "glm-5.2", "family": "glm", "prompt": 0.49, "completion": 1.54},
             {"id": "glm-5.1", "family": "glm", "prompt": 0.966, "completion": 3.036},
-            {"id": "deepseek-v4-flash", "family": "deepseek", "prompt": 0.14, "completion": 0.28},
-            {"id": "deepseek-v4-pro", "family": "deepseek", "prompt": 0.435, "completion": 0.87},
+            {"id": "deepseek-v4-flash-0731", "family": "deepseek", "prompt": 0.14, "completion": 0.28},
+            {"id": "deepseek-v4-pro-0813", "family": "deepseek", "prompt": 0.435, "completion": 0.87},
             {"id": "kimi-k3", "family": "kimi", "prompt": 3.00, "completion": 15.00},
             {"id": "kimi-k2.7-code", "family": "kimi", "prompt": 0.71, "completion": 3.50},
             {"id": "kimi-k2.6", "family": "kimi", "prompt": 0.65, "completion": 3.41},

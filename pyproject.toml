@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tokenpage"
-version = "0.5.0"
+version = "0.5.1"
 description = "Token黄页 — 主流模型价格优惠情报（桌宠式比价：聚合站/订阅/官方 API 矩阵 + 涨跌 + ZDR）"
 readme = "README.md"
 requires-python = ">=3.9"

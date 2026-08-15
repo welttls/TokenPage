@@ -81,8 +81,16 @@ def fetch() -> list[PriceQuote]:
             "cache_write": _parse_money(_cell(tr, 4)),
         }
 
-    # 需要跟踪的逻辑模型（Go 清单）
-    track = set(logical_models().keys())
+    # 需要跟踪的逻辑模型（Go 清单）+ 各模型在 Zen 的站 ID（DeepSeek 显式带日期后，
+    # Zen 文档模型 ID 与逻辑名不再一致，需经 zen_to_lm 反查逻辑 ID）
+    lm_map = logical_models()
+    track = set(lm_map.keys())
+    zen_to_lm: dict[str, str] = {}
+    for lm, meta in lm_map.items():
+        zid = meta.get("zen")
+        if zid:
+            track.add(zid)
+            zen_to_lm[zid] = lm
     # 加上 Zen 的 Claude 模型
     for cid in CLAUDE_MODELS:
         track.add(cid)
@@ -96,11 +104,12 @@ def fetch() -> list[PriceQuote]:
         row = price_rows.get(name)
         if not row:
             continue
+        lm = zen_to_lm.get(norm, norm)
         family = ""
-        if norm in CLAUDE_MODELS:
-            family = CLAUDE_MODELS[norm]
-        elif norm in track:
-            family = (logical_models().get(norm) or {}).get("family", "")
+        if lm in CLAUDE_MODELS:
+            family = CLAUDE_MODELS[lm]
+        elif lm in lm_map:
+            family = (lm_map.get(lm) or {}).get("family", "")
         quote = PriceQuote(
             provider="opencode_zen",
             provider_label=provider_labels()["opencode_zen"],

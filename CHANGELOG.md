@@ -2,6 +2,14 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
+## v0.5.1（2026-08-15）
+
+### 新增
+- **DeepSeek V4 快照显式带日期**：DeepSeek 族从「flash / pro」两行改为 OpenRouter 实际存在的四个带日期快照行——`deepseek-v4-flash-0423`（$0.07546 / $0.15092）、`deepseek-v4-flash-0731`（$0.14 / $0.28）、`deepseek-v4-pro-0423`（$1.168 / $2.336）、`deepseek-v4-pro-0813`（$0.435 / $0.87）。原先的 `deepseek-v4-flash` / `deepseek-v4-pro` 分别对应 0731 快照与 0813 GA（即「最新」档，官方 / 硅基 / Go / Zen / Ollama 均挂此档）；0423 初版仅在 OpenRouter 有价
+- **各站映射新增 `go` / `zen` 字段**：Go / Zen 文档模型 ID 不带日期（`deepseek-v4-flash`），经 `_logical_name` 反向映射与 Zen `track` 反查归组到对应日期行，避免改名后产生孤立的 `deepseek-v4-flash` 行或 Zen 整行丢失
+
+---
+
 ## v0.5.0（2026-08-15）
 
 ### 新增

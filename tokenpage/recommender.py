@@ -289,20 +289,21 @@ def _logical_name(row: dict, models_map: dict) -> str:
     若该站模型 ID 在 config.models 映射中存在，用逻辑名；否则用模型 ID 本身。
     """
     station_map = models_map.get("models", {})
-    # 反向：station_id -> logical
+    # 反向：station_id -> logical（含 openrouter/siliconflow/go/zen 各站 ID；
+    # Go/Zen 文档模型 ID 通常与逻辑名一致，但 DeepSeek 显式带日期后需经此映射回退）
     reverse = {}
     for lm, meta in station_map.items():
-        for provider in ("openrouter", "siliconflow"):
+        for provider in ("openrouter", "siliconflow", "go", "zen"):
             sid = meta.get(provider)
             if sid:
                 reverse[sid] = lm
     provider = row["provider"]
     mid = row["model_id"]
-    # opencode_go / opencode_zen / 官方订阅套餐（*_plan）/ 官方直连（route_type=official，
-    # provider 为 anthropic/openai/... 等厂商名）的模型 ID 本身就是逻辑名
+    # 官方订阅套餐（*_plan）/ 官方直连（route_type=official，provider 为
+    # anthropic/openai/... 等厂商名）的模型 ID 本身就是逻辑名；各站 ID 在
+    # config.models 中有映射的也用逻辑名
     if (
-        provider in ("opencode_go", "opencode_zen")
-        or provider.endswith("_plan")
+        provider.endswith("_plan")
         or row.get("route_type") == "official"
         or mid in station_map
     ):
