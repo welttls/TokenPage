@@ -6,6 +6,7 @@
     tokenpage deals   —— 查看 OpenRouter 限时折扣（--json 纯输出）
     tokenpage diff    —— 对比最近两次抓取，标记降价/涨价/新上架/下架
     tokenpage rules   —— 查看峰谷规则与当前谷/峰状态
+    tokenpage doctor  —— 环境与数据诊断（SQLite/配置/上游可达性/汇率新鲜度）
     tokenpage web     —— 启动本地 Web 版界面
 """
 
@@ -98,8 +99,12 @@ def _pf(v) -> str:
 
 def cmd_diff(_args) -> int:
     diff = price_diffs()
+    # 首用体验：区分「空库」与「只抓过一次」
+    if diff["current"] is None:
+        console.print("[red]数据库为空，请先运行 tokenpage fetch。[/]")
+        return 0
     if not diff["previous"]:
-        console.print("暂无对比数据：需要至少两次抓取（上一次与本次）。")
+        console.print("这是第一次抓取，尚无历史数据对比。明天再跑 diff 就能看到涨跌了。")
         return 0
     if not diff["changes"]:
         console.print(f"[bold cyan]涨跌情报[/]（对比 {diff['previous']} → {diff['current']}）")
@@ -184,6 +189,13 @@ def cmd_rules(_args) -> int:
     return 0
 
 
+def cmd_doctor(args) -> int:
+    """运行环境与数据诊断（只读，不写库/不改配置）。"""
+    from tokenpage.doctor import run as doctor_run
+
+    return doctor_run(no_network=args.no_network)
+
+
 def cmd_web(args) -> int:
     """启动 Web 版界面。Flask 延迟导入，避免缺依赖时拖垮其他命令。"""
     ensure_config()
@@ -228,6 +240,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_deals.add_argument("--json", action="store_true", help="纯 JSON 输出")
     sub.add_parser("diff", help="对比最近两次抓取的涨跌")
     sub.add_parser("rules", help="查看峰谷规则与当前状态")
+    p_doctor = sub.add_parser(
+        "doctor", help="环境与数据诊断（SQLite/配置/上游可达性/汇率新鲜度）"
+    )
+    p_doctor.add_argument(
+        "--no-network", action="store_true", help="跳过网络检查（只做本地检查）"
+    )
     p_web = sub.add_parser("web", help="启动 Web 版界面（浏览器查看）")
     p_web.add_argument("--host", default="127.0.0.1", help="监听地址（默认 127.0.0.1）")
     p_web.add_argument("--port", type=int, default=8765, help="监听端口（默认 8765）")
@@ -248,6 +266,7 @@ def main(argv: list[str] | None = None) -> int:
         "deals": cmd_deals,
         "diff": cmd_diff,
         "rules": cmd_rules,
+        "doctor": cmd_doctor,
         "web": cmd_web,
     }
     return handlers[args.cmd](args)

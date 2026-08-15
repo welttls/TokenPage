@@ -24,7 +24,7 @@
 
 **模型清单**：跟随 OpenCode Go 页面「当前支持的模型列表」（OpenCode 团队实测适合编程的模型），每天抓取检测变化；额外补 Claude 闭源模型（从 OpenCode Zen / 官方 API）。
 
-## 特性（v0.3）
+## 特性
 
 - **模型 × 路线 比价矩阵**：每个模型展示各路线的输入价、输出价、缓存读、缓存写
 - **折扣并入矩阵**：OpenRouter 限时折扣并入对应模型的 OpenRouter 列（显示折扣后价 + 原价划掉 + 🎁 标签）；非编程清单折扣单独在「限时折扣」Tab
@@ -39,15 +39,23 @@
 - **悬浮说明**：标签解释、路线官网、官方 API 说明、额度折算/折扣浮窗
 - **每天一次抓取**：24h 冷却，冷却期刷新按钮禁用并显示倒计时；强制刷新受独立 10 分钟冷却限流（防高频爬取被上游判定攻击）
 - **抓取失败兜底**：单站抓取失败时沿用上一批快照（比价矩阵不缺行、涨跌情报不误报「下架」）
+- **官方订阅套餐折算**：Claude / ChatGPT / GLM / 通义(Qoder) / Kimi 官方编程订阅折算成等效价并入矩阵（有明确额度折算数字；无额度标 ♾️ / 宣称倍率）
+- **中英文切换**：整站一键中英切换（语言偏好本地持久化）
+- **每日自动汇率**：`fetch` 时自动更新人民币兑美元汇率（免钥公开 API，失败保留原值）
+- **复古黄页 UI**：报纸式刊头、品牌商标图标、折叠/置顶/拖拽排序
 - **100% 本地**：所有数据存 `~/.tokenpage/prices.db`，零上传、零上报；Web 界面无外部 CDN/字体，离线可用
 
 ## 安装
 
 ```bash
+# 纯 CLI（init / fetch / show / diff / doctor 等）
 pip install -e .
+
+# 需要本地 Web 版时再安装 Flask
+pip install -e ".[web]"
 ```
 
-依赖：`requests`、`rich`、`beautifulsoup4`、`flask`（Python ≥ 3.9）。
+依赖：`requests`、`rich`、`beautifulsoup4`（Python ≥ 3.9）；Web 版额外依赖 `flask`（通过 `.[web]` 安装）。
 
 ## 使用
 
@@ -58,6 +66,7 @@ tokenpage show      # 模型 × 路线 比价矩阵（--json 纯输出）
 tokenpage deals     # 查看 OpenRouter 限时折扣（--json 纯输出）
 tokenpage diff      # 对比最近两次抓取，标记降价/涨价/新上架/下架
 tokenpage rules     # 查看峰谷规则与当前谷/峰状态
+tokenpage doctor    # 环境与数据诊断（SQLite / 配置 / 上游可达性 / 汇率新鲜度）
 tokenpage web       # 启动本地 Web 版界面（浏览器查看）
 tokenpage web --host 0.0.0.0 --readonly   # 公开部署：只读模式，访客不触发抓取
 ```
@@ -83,6 +92,36 @@ $ tokenpage show
 
 > 额度折算示例：Kimi K2.6 在 OpenCode Go 标价 $0.95/1M，额度 $60/月（月费 $10）→ 等效价 $0.95 ÷ 6 ≈ $0.16。
 
+## 项目结构
+
+```text
+tokenpage/                  # 核心包
+├── __main__.py             # python -m tokenpage 入口
+├── cli.py                  # CLI 子命令（init/fetch/show/diff/doctor/rules/web）
+├── config.py               # 配置加载（~/.tokenpage/*.json）
+├── models.py               # 核心数据结构（PriceQuote / QuotaInfo / ZdrInfo）
+├── recommender.py          # 比价矩阵组装与排序
+├── storage.py              # SQLite 存取（~/.tokenpage/prices.db）
+├── sync.py                 # 统一抓取入库流程
+├── pricing.py              # 峰谷规则
+├── quota.py                # 订阅额度折算
+├── output.py               # 终端表格输出
+├── web.py                  # Flask Web 版（单文件）
+├── fetchers/               # 各站抓取器（openrouter / siliconflow / opencode_go / …）
+├── static/                 # 前端静态资源（app.js / style.css / icons/）
+└── templates/              # Jinja 模板（index.html）
+
+~/.tokenpage/               # 用户配置与数据目录
+├── prices.db               # SQLite 数据库（价格快照，只留 2 天）
+├── models.json             # 模型族标签 + 跨站模型 ID 映射
+├── rules.json              # 峰谷规则
+├── fx.json                 # 人民币兑美元汇率（每日自动更新）
+├── go.json                 # OpenCode Go 订阅配置
+├── official.json           # 官方 API 价格覆盖
+├── plans.json              # 官方订阅套餐配置
+└── user_prefs.json         # Web 用户偏好（排序/置顶/折叠/语言）
+```
+
 ## 配置（~/.tokenpage/）
 
 | 文件            | 说明                                                       |
@@ -91,7 +130,7 @@ $ tokenpage show
 | `rules.json`    | 峰谷规则（内置 DeepSeek 官方，可覆盖/新增）                |
 | `go.json`       | OpenCode Go 订阅配置（月费、基础额度）                     |
 | `official.json` | 官方 API 直连模型价格（可覆盖内置价格表）                  |
-| `fx.json`       | 人民币兑美元汇率（SiliconFlow 比价换算）                   |
+| `fx.json`       | 人民币兑美元汇率（SiliconFlow 比价换算；每次 `fetch` 自动更新，可手动覆盖） |
 
 ## 隐私
 
@@ -120,15 +159,19 @@ TOKENPAGE_ALLOWED_HOSTS=your.domain.com tokenpage web --host 0.0.0.0 --readonly
 - **XSS 防护**：前端所有第三方数据（模型名/厂商名）HTML 转义 + CSP 响应头（脚本仅同源、禁内联）
 - **冷却防竞态**：强刷「检查+占位」原子化，并发请求无法绕过 10 分钟冷却
 
-> 长期方案见路线图「发布页静态化」：本机定时抓取 → 生成静态快照托管，Web 服务只读快照。注意 Flask 自带开发服务器不适合直接暴露公网，正式发布建议前置反向代理（nginx/caddy）或使用静态快照方案。
+> 长期方案见路线图「发布页静态化」：定时抓取 → 生成静态快照托管，Web 服务只读快照。注意 Flask 自带开发服务器不适合直接暴露公网，正式发布建议前置反向代理（nginx/caddy）或使用静态快照方案。
+>
+> ⚠️ 风险提示：把「本机生成的价格快照」托管到公网，本质上等于替所有访客抓取聚合站——你的 IP 会变成公共爬虫代理，聚合站反爬时封的是你的 IP。建议静态化抓取改用 GitHub Actions 的 IP 池，或干脆保持「人人本地运行」。
 
 ## 路线图
 
 - [x] v0.1 核心闭环：OpenRouter / DeepSeek官方 / SiliconFlow 抓取、推荐表格、本地 SQLite
 - [x] v0.2 重构：模型 × 路线比价矩阵、OpenCode Go/Zen 订阅折算、7 家官方 API、ZDR 标注、涨跌情报（只留两天）
-- [ ] v0.3 提醒：谷时开始提醒、降价推送、关注列表
-- [ ] v0.4 生态：桌面小组件（桌宠感）、一键配置 AI 编程工具
-- [ ] 远期：发布页静态化 / 接口分离——本机定时抓取 → 生成静态页面/JSON 快照 → 静态托管发布；访客刷新只重读快照、绝不触发爬取，杜绝「公共爬虫代理」与上游封禁风险
+- [x] v0.3 优惠情报深化：限时折扣并入矩阵、OpenCode Go「2x usage」、实时峰谷、官方订阅套餐折算、中英文切换、Web 安全加固（只读模式 / Host 白名单 / CSRF / CSP）、抓取失败快照兜底
+- [x] v0.4 复古黄页 UI：报纸式刊头、品牌商标图标、比价矩阵交互打磨（折叠/置顶/拖拽/字母排序）
+- [ ] 计划中：谷时开始提醒、降价推送、关注列表
+- [ ] 计划中：桌面小组件（桌宠感）、一键配置 AI 编程工具
+- [ ] 远期：发布页静态化 / 接口分离——本机或 GitHub Actions 定时抓取 → 生成静态页面/JSON 快照 → 静态托管发布；访客刷新只重读快照、绝不触发爬取，杜绝「公共爬虫代理」与上游封禁风险
 
 ## License
 

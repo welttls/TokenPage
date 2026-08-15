@@ -61,6 +61,7 @@ const I18N = {
     status_data: "数据时间",
     status_sources: "收录渠道",
     status_offpeak: "峰谷电价",
+    go_promo_warn: "⚠️ OpenCode Go 促销抓取连续 {n} 天失败，已沿用内置/上次数据",
     refresh: "↻ 刷新价格",
     force: "⚡ 强制刷新",
     cooling: "⏳ 冷却 {n}",
@@ -139,10 +140,11 @@ const I18N = {
     brand_suffix: " Yellow Pages",
     tagline: "— Model Price Directory · Bargain Intel · One Volume, Compare & Conquer —",
     ad_tag: "AD SPACE",
-    ad_line: "Compare Prices · on the Pages",
+    ad_line: "Compare Prices\non the Pages",
     status_data: "Data Time",
     status_sources: "Sources",
     status_offpeak: "Off-peak",
+    go_promo_warn: "⚠️ OpenCode Go promo scrape failed {n} days straight; using built-in / last data",
     refresh: "↻ Refresh",
     force: "⚡ Force",
     cooling: "⏳ Cooldown {n}",
@@ -290,6 +292,7 @@ function applyLang() {
   if (lastOverview) {
     renderProviders(lastOverview.providers);
     renderOffpeak(lastOverview.rules);
+    renderGoPromoWarn(lastOverview.go_promo_warning || 0);
     renderMatrix(lastOverview.matrix);
     renderDiffs(lastOverview.diffs);
     renderDeals(lastOverview.deals);
@@ -305,6 +308,7 @@ function toggleLang() {
   lang = lang === "zh" ? "en" : "zh";
   try { localStorage.setItem(LANG_KEY, lang); } catch {}
   applyLang();
+  pushPrefs();
 }
 
 const ROUTE_CLASS = {
@@ -394,8 +398,48 @@ function loadUI() {
     uiState = { order: [], pinned: [], collapsed: [], alpha: 0, cny: false };
   }
 }
+
+// 把当前偏好推送到服务端（user_prefs.json）。localStorage 仍保留作离线/静态托管兜底。
+function pushPrefs() {
+  const body = { ...uiState, lang };
+  try {
+    fetch("/api/prefs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+  } catch {}
+}
+
+// 启动时从服务端合并偏好：服务端有数据则覆盖本地（同机多浏览器共享）；
+// 服务端无数据而本地有则一次性回填服务端（迁移旧 localStorage 用户）。
+function syncPrefsFromServer() {
+  fetch("/api/prefs", { headers: { "Accept": "application/json" } })
+    .then((r) => r.json())
+    .catch(() => null)
+    .then((server) => {
+      if (!server || typeof server !== "object") return;
+      const hasServerData = ["order", "pinned", "collapsed", "alpha", "cny", "lang"]
+        .some((k) => (Array.isArray(server[k])
+          ? server[k].length
+          : server[k] !== undefined && server[k] !== null && server[k] !== false && server[k] !== ""));
+      if (!hasServerData) {
+        if (localStorage.getItem(UI_KEY) || localStorage.getItem(LANG_KEY)) pushPrefs();
+        return;
+      }
+      uiState = { order: [], pinned: [], collapsed: [], alpha: 0, cny: false, ...server };
+      if (server.lang === "zh" || server.lang === "en") lang = server.lang;
+      try {
+        localStorage.setItem(UI_KEY, JSON.stringify(uiState));
+        localStorage.setItem(LANG_KEY, lang);
+      } catch {}
+      applyLang();
+    });
+}
+
 function saveUI() {
   try { localStorage.setItem(UI_KEY, JSON.stringify(uiState)); } catch {}
+  pushPrefs();
 }
 
 function tagHelp(tag) {
@@ -517,6 +561,19 @@ function renderOffpeak(rules) {
       return `<span class="status-value">${esc(plabel(r.provider, r.provider_label))}: ${mark}</span>`;
     })
     .join(" · ");
+}
+
+// OpenCode Go 营销页促销抓取连续失败（>=3 天）在状态条显示 ⚠️
+function renderGoPromoWarn(streak) {
+  const el = $("#goPromoWarn");
+  if (!el) return;
+  if (Number(streak) >= 3) {
+    el.style.display = "";
+    const v = el.querySelector(".status-value");
+    if (v) v.textContent = t("go_promo_warn", { n: Number(streak) });
+  } else {
+    el.style.display = "none";
+  }
 }
 
 function renderDiffs(diffs) {
@@ -817,6 +874,7 @@ async function loadOverview() {
   $("#dataTime").textContent = data.has_data ? (data.fetched_at || "—") : (readonlyMode ? t("no_data_readonly") : t("no_data_click"));
   renderProviders(data.providers);
   renderOffpeak(data.rules);
+  renderGoPromoWarn(data.go_promo_warning || 0);
   renderMatrix(data.matrix);
   renderDiffs(data.diffs);
   renderDeals(data.deals);
@@ -946,6 +1004,7 @@ function tickClock() {
 
 function setup() {
   loadUI();
+  syncPrefsFromServer();
   $("#btnRefresh").addEventListener("click", refreshPrices);
   $("#btnForce").addEventListener("click", forceRefresh);
   $("#btnAlpha").addEventListener("click", toggleAlpha);

@@ -128,7 +128,7 @@ html, body {
   box-shadow: 0 2px 3px rgba(46,36,18,.45), inset 0 -3px 4px rgba(46,36,18,.55);
 }
 .ad-tag { font-size: 10px; letter-spacing: .3em; color: var(--ink-dim); }
-.ad-line { font-size: 18px; font-weight: 900; letter-spacing: .12em; color: var(--accent); }
+.ad-line { font-size: 18px; font-weight: 900; letter-spacing: .12em; color: var(--accent); white-space: pre-line; }
 /* 英文版招牌文案较长：略缩字号/字距，保持紧凑两行，不把招牌撑高 */
 html[lang="en"] .masthead-ad .ad-line {
   font-size: 15px;

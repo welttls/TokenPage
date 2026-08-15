@@ -37,14 +37,15 @@ def _fetch_promo_multipliers(name_to_id: dict[str, str]) -> dict[str, float]:
 
     营销页的额度表为 JS 交互（1x/10x/... 滑块），静态 HTML 里以
     「2x usage / 2 倍使用额度」徽标文本出现，紧邻模型展示名。
-    解析失败返回空 dict（由 go.json 配置兜底）。
+    返回 (out, err)：err 非空表示网络/HTTP 抓取失败（由 fetch() 记 warning + 计数）；
+    out 为空不代表失败（页面可能确实无促销）。
     """
     try:
         r = requests.get(MARKET_URL, timeout=15, headers=_HEADERS)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
-    except Exception:  # noqa: BLE001 - 促销抓取失败不中断主流程
-        return {}
+    except Exception as e:  # noqa: BLE001 - 促销抓取失败不中断主流程
+        return {}, f"{type(e).__name__}: {e}"
 
     out: dict[str, float] = {}
     pattern = re.compile(r"2\s*x\s*usage|2\s*倍\s*使用额度", re.I)
@@ -66,7 +67,7 @@ def _fetch_promo_multipliers(name_to_id: dict[str, str]) -> dict[str, float]:
             container = container.parent
         if matched:
             out[matched] = 2.0
-    return out
+    return out, None
 
 
 def _parse_money(s: str) -> float | None:
@@ -128,8 +129,31 @@ def fetch() -> list[PriceQuote]:
         return []
 
     # ---- 限时额度促销（2x usage）：config 兜底 + 营销页自动抓取覆盖 ----
+    # 营销页 DOM 脆弱：抓取失败不中断主流程，记 warning + 连续失败计数
+    #（streak>=3 时 Web 端显示 ⚠️，提示沿用内置/上次数据）
     promo: dict[str, dict] = dict(go.get("promo", {}) or {})
-    scraped = _fetch_promo_multipliers(name_to_id)
+    scraped, promo_err = _fetch_promo_multipliers(name_to_id)
+
+    def _bump_promo_fail(reason: str) -> None:
+        from tokenpage.storage import get_meta, set_meta
+
+        streak = (int(get_meta("go_promo_fail_streak") or "0") or 0) + 1
+        set_meta("go_promo_fail_streak", str(streak))
+        log.warning(
+            "OpenCode Go 折扣抓取失败（连续 %d 次）：%s，沿用上次数据/内置兜底",
+            streak, reason,
+        )
+
+    if promo_err:
+        _bump_promo_fail(promo_err)
+    elif not scraped and promo:
+        # 有配置兜底促销，但营销页一个都没解析到 → 结构可能已变，同样计数提醒
+        _bump_promo_fail("营销页未解析到任何促销（页面结构可能已变）")
+    else:
+        from tokenpage.storage import set_meta
+
+        set_meta("go_promo_fail_streak", "0")
+
     for mid, mult in scraped.items():
         promo[mid] = {
             "multiplier": mult,

@@ -22,7 +22,14 @@ from urllib.parse import urlsplit
 from flask import Flask, jsonify, render_template, request
 
 from tokenpage import __version__
-from tokenpage.config import ensure_config, load_fx, provider_labels, provider_meta
+from tokenpage.config import (
+    ensure_config,
+    load_fx,
+    load_user_prefs,
+    provider_labels,
+    provider_meta,
+    save_user_prefs,
+)
 from tokenpage.fetchers.openrouter_discount import _is_in_go_list
 from tokenpage.pricing import apply_offpeak_live, offpeak_status
 from tokenpage.recommender import recommend
@@ -221,6 +228,14 @@ def _rules_status() -> list[dict]:
     return out
 
 
+def _go_promo_warning() -> int:
+    """OpenCode Go 营销页促销抓取连续失败次数（>=3 时前端显示 ⚠️）。"""
+    try:
+        return int(get_meta("go_promo_fail_streak") or "0") or 0
+    except (TypeError, ValueError):
+        return 0
+
+
 @app.get("/")
 def index():
     return render_template("index.html", version=__version__)
@@ -249,6 +264,7 @@ def api_overview():
             "force_cooldown_remaining": _cooldown_remaining(
                 get_meta("last_force_fetch_at"), FORCE_COOLDOWN_SECONDS
             ),
+            "go_promo_warning": _go_promo_warning(),
             "fx": load_fx(),
             "provider_meta": provider_meta(),
             "providers": _providers_status(),
@@ -258,6 +274,32 @@ def api_overview():
             "deals": _deals_json(),
         }
     )
+
+
+# 用户偏好允许写入的字段（白名单，防任意键注入）
+_PREFS_KEYS = ("lang", "order", "pinned", "collapsed", "alpha", "cny")
+
+
+@app.get("/api/prefs")
+def api_get_prefs():
+    """读取 Web 用户偏好（user_prefs.json；只读模式同样可用）。"""
+    ensure_config()
+    return jsonify(load_user_prefs())
+
+
+@app.post("/api/prefs")
+def api_set_prefs():
+    """保存 Web 用户偏好（仅白名单字段；与价格数据分离，本机多浏览器共享）。"""
+    ensure_config()
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "invalid_payload"}), 400
+    prefs = load_user_prefs()
+    for k in _PREFS_KEYS:
+        if k in data:
+            prefs[k] = data[k]
+    save_user_prefs(prefs)
+    return jsonify({"ok": True, "prefs": prefs})
 
 
 def _deals_json() -> list[dict]:

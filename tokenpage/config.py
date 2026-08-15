@@ -211,6 +211,18 @@ DEFAULT_PLANS: dict = {
     },
 }
 
+# Web 用户偏好默认值（~/.tokenpage/user_prefs.json）。
+# 与价格数据（SQLite）分离，落盘到本机文件——同一台机器的不同浏览器可共享；
+# 前端仍以 localStorage 作离线/静态托管兜底。
+DEFAULT_USER_PREFS: dict = {
+    "lang": "zh",        # 界面语言（zh / en）
+    "order": [],          # 模型族拖拽排序
+    "pinned": [],         # 📌 置顶的模型族
+    "collapsed": [],      # 折叠的模型族
+    "alpha": 0,           # 字母排序：0 默认 / 1 A-Z / 2 Z-A
+    "cny": False,         # 币种：False=美元主显 / True=人民币主显
+}
+
 
 def ensure_config() -> None:
     """首次运行时在 ~/.tokenpage 生成默认配置文件。"""
@@ -259,6 +271,18 @@ def save_fx(fx: dict) -> None:
     """写回 fx.json（如每日自动抓取的汇率）。"""
     (DATA_DIR / "fx.json").write_text(
         json.dumps(fx, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def load_user_prefs() -> dict:
+    """加载 Web 用户偏好（~/.tokenpage/user_prefs.json，缺失返回默认值）。"""
+    return _load("user_prefs.json", DEFAULT_USER_PREFS)
+
+
+def save_user_prefs(prefs: dict) -> None:
+    """写回 Web 用户偏好（用户行为数据，非配置模板，仅在有改动时落盘）。"""
+    (DATA_DIR / "user_prefs.json").write_text(
+        json.dumps(prefs, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
 

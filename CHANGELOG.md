@@ -2,6 +2,27 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
+## v0.4.0（2026-08-15）
+
+### 新增
+- **`tokenpage doctor` 诊断命令**：一键检查 SQLite 完整性/价格快照、各配置文件 JSON 语法、OpenRouter / SiliconFlow / DeepSeek 官方上游可达性、fx.json 汇率新鲜度；`✓/✗/!` 三态输出，`--no-network` 跳过网络检查（只读，不写库/不改配置）
+- **用户偏好落盘 `~/.tokenpage/user_prefs.json`**：Web 的模型族排序/置顶/折叠/字母排序/币种/语言从浏览器 localStorage 迁移到本机文件——同一台机器不同浏览器共享，清缓存不丢（前端仍保留 localStorage 作离线/静态托管兜底）
+- **跨站模型映射容错**：OpenRouter 先精确 ID 匹配，未命中时用归一化模型 name 匹配，再退到 Levenshtein 编辑距离模糊兜底（命中打 warning 提示「建议固化到 models.json」，不自动回写）；SiliconFlow 同理按页面模型名模糊兜底，减少各站改名/新增导致的手动维护
+- **OpenCode Go 营销页抓取容错与告警**：促销抓取失败不再静默，输出 `warning: OpenCode Go 折扣抓取失败，沿用上次数据`；连续失败次数记入 meta，连续 ≥3 天在 Web 状态条显示 ⚠️ 提示
+
+### 优化
+- `cmd_diff` 首用体验：区分「数据库为空」与「只抓过一次」两种状态并给出友好提示（明天再跑 diff 就能看到涨跌）
+- `diff`/`deals`/`show` 等 CLI 命令不再依赖 Flask（纯 CLI 用户无需安装）
+
+### 工程
+- **Flask 改为可选依赖**：`pip install -e .` 只装 CLI；`pip install -e ".[web]"` 才安装 Web 版
+- README 重写：特性章节去掉过时版本号、路线图按实际实现校正（未实现项移入「计划中」）、新增项目结构说明、fx.json 标注每日自动更新、静态化补充「公共爬虫代理/封 IP」风险提示
+
+### 修复
+- 英文版广告招牌「Compare Prices · on the Pages」拆为两行（`Compare Prices` / `on the Pages`），避免被挤到左侧
+
+---
+
 ## v0.3.13（2026-08-15）
 
 ### 新增
