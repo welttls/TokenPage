@@ -2,6 +2,18 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
+## v0.5.2（2026-08-15）
+
+### 新增
+- **README 顶部版本 badge**：新增 shields.io 版本徽章（version-0.5.2）、Python 与 License 徽章，安装后一眼可辨版本
+- **README `plans.json` 示例**：配置表补上 `plans.json` 行，并新增「官方订阅套餐折算」小节——含真实字段示例（`fee` / `quota_type` / `tokens_in|tokens_out` / `monthly_quota` / `tag` / `estimate` / `models` / `note`）与字段说明表
+- **README 项目结构展开 `fetchers/`**：列出全部 9 个抓取器文件及职责（openrouter / openrouter_discount / siliconflow / opencode_go / opencode_zen / coding_plans / official / deepseek / fx）
+
+### 优化
+- 版本号升至 v0.5.2（Web 报头 `VOL. 1 · NO. 0.5.2` 与 `tokenpage --version` 同步更新）
+
+---
+
 ## v0.5.1（2026-08-15）
 
 ### 新增

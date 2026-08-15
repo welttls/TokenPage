@@ -2,6 +2,10 @@
 
 查模型价格，上 Token 黄页。
 
+![版本](https://img.shields.io/badge/version-0.5.2-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
 每天抓取一次主流模型在**各条路线**上的价格与优惠，告诉你现在用哪条路线最划算。
 专为程序员设计——像翻优惠券一样，看今天哪家打折、额度翻倍、限免、数据零保留（ZDR）。
 
@@ -107,7 +111,16 @@ tokenpage/                  # 核心包
 ├── quota.py                # 订阅额度折算
 ├── output.py               # 终端表格输出
 ├── web.py                  # Flask Web 版（单文件）
-├── fetchers/               # 各站抓取器（openrouter / siliconflow / opencode_go / …）
+├── fetchers/               # 各站抓取器
+│   ├── openrouter.py           # OpenRouter 聚合站
+│   ├── openrouter_discount.py  # OpenRouter 限时折扣
+│   ├── siliconflow.py          # 硅基流动（国内/人民币）
+│   ├── opencode_go.py          # OpenCode Go 订阅（额度折算 / 2x usage）
+│   ├── opencode_zen.py         # OpenCode Zen
+│   ├── coding_plans.py         # 官方订阅套餐（Claude/GPT/GLM/Qoder/Kimi/Ollama）
+│   ├── official.py             # 官方 API 直连价格
+│   ├── deepseek.py             # DeepSeek 峰谷
+│   └── fx.py                   # 人民币兑美元汇率
 ├── static/                 # 前端静态资源（app.js / style.css / icons/）
 └── templates/              # Jinja 模板（index.html）
 
@@ -130,7 +143,41 @@ tokenpage/                  # 核心包
 | `rules.json`    | 峰谷规则（内置 DeepSeek 官方，可覆盖/新增）                |
 | `go.json`       | OpenCode Go 订阅配置（月费、基础额度）                     |
 | `official.json` | 官方 API 直连模型价格（可覆盖内置价格表）                  |
+| `plans.json`    | 官方订阅套餐配置（Claude/ChatGPT/GLM/Qoder/Kimi/Ollama 订阅折算） |
 | `fx.json`       | 人民币兑美元汇率（SiliconFlow 比价换算；每次 `fetch` 自动更新，可手动覆盖） |
+
+### `plans.json`：官方订阅套餐折算
+
+把官方编程订阅（Claude / ChatGPT / GLM / 通义 Qoder / Kimi Code / Ollama 云）折算成「等效每 1M token 价」并入比价矩阵：
+
+```json
+{
+  "claude_plan": {
+    "label": "Claude 订阅",
+    "label_en": "Claude Sub",
+    "url": "https://www.anthropic.com/pricing",
+    "currency": "USD",
+    "family": "claude",
+    "fee": 20.0,
+    "quota_type": "value",
+    "monthly_quota": 100.0,
+    "estimate": true,
+    "tag": "宣称×5",
+    "models": ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"],
+    "note": "Claude Pro $20/月：官方宣称 5× 但未公布 token 额度 → 按标价 ÷ 5 估算等效价"
+  }
+}
+```
+
+关键字段：
+
+| 字段         | 说明                                                                 |
+| ------------ | -------------------------------------------------------------------- |
+| `fee`        | 月费（按 `currency` 区分 USD / CNY）                                 |
+| `quota_type` | 额度口径：`"tokens"` 有明确 token 额度（配 `tokens_in`/`tokens_out`）；`"value"` 有明确额度价值（配 `monthly_quota`）；`"none"` 无公开额度 → 只标 ♾️/宣称倍率，不折算数字 |
+| `tag`        | 标签（如「宣称×5」「额度×3」）；不填则按倍率自动生成                |
+| `estimate`   | `true` 时等效价/标签加「估算」角标                                    |
+| `models`     | 套用的模型：字符串 = 官方 API 价 ÷ 倍率；跨厂商订阅用 `{"id","family","prompt","completion"}` 条目自带标价 |
 
 ## 隐私
 
