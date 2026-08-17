@@ -68,18 +68,33 @@ def fetch() -> list[PriceQuote]:
             name_to_id[name] = mid
 
     # ---- table 1：价格 ----
+    # 行名归一化：DeepSeek 官方峰谷生效后，Zen 把 DeepSeek 拆成
+    # 「(Off-Peak) / (Peak)」两行（如 DeepSeek V4 Flash (Peak)），
+    # 与 table 0 的展示名（DeepSeek V4 Flash）不一致。这里去掉后缀归并，
+    # 取 Peak 档作基准价，由 pricing.apply_offpeak_live 按当前时段实时折算。
     price_rows: dict[str, dict] = {}
     for tr in tables[1].find_all("tr")[1:]:
         name = _cell(tr, 0)
         if not name:
             continue
-        prompt = _parse_money(_cell(tr, 1))
-        price_rows[name] = {
-            "prompt": prompt,
+        is_peak = bool(re.search(r"\(Peak\)\s*$", name, re.I))
+        is_offpeak = bool(re.search(r"\(Off-Peak\)\s*$", name, re.I))
+        base_name = re.sub(r"\s*[<(（].*", "", name).strip()
+        row = {
+            "prompt": _parse_money(_cell(tr, 1)),
             "completion": _parse_money(_cell(tr, 2)),
             "cache_read": _parse_money(_cell(tr, 3)),
             "cache_write": _parse_money(_cell(tr, 4)),
         }
+        if base_name in price_rows:
+            if is_peak:  # 峰谷 Peak 档覆盖为基准价
+                price_rows[base_name] = row
+            if is_peak or is_offpeak:
+                price_rows[base_name]["_offpeak"] = True
+        else:
+            price_rows[base_name] = row
+            if is_peak or is_offpeak:
+                price_rows[base_name]["_offpeak"] = True
 
     # 需要跟踪的逻辑模型（Go 清单）+ 各模型在 Zen 的站 ID（DeepSeek 显式带日期后，
     # Zen 文档模型 ID 与逻辑名不再一致，需经 zen_to_lm 反查逻辑 ID）
@@ -125,6 +140,7 @@ def fetch() -> list[PriceQuote]:
             currency="USD",
             raw_prompt=row["prompt"],
             raw_completion=row["completion"],
+            offpeak_enabled=bool(row.get("_offpeak")),
         )
         if row["prompt"] == 0:
             quote.deal_tag = "🆓限免"

@@ -16,6 +16,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from tokenpage.config import load_rules
+from tokenpage.models import ROUTE_SUBSCRIPTION
 
 
 def _parse_hm(s: str) -> int:
@@ -41,15 +42,21 @@ def is_in_ranges(minute: int, ranges: list) -> bool:
 
 
 def offpeak_status(
-    provider: str, now_utc: datetime | None = None
+    provider: str, now_utc: datetime | None = None, family: str | None = None
 ) -> tuple[bool | None, float | None]:
     """返回 (是否谷时, 倍率)。该 provider 无规则则返回 (None, None)。
+
+    若 provider 无峰谷规则但指定了 family（模型族），回退到 family 级规则——
+    例如 OpenCode Go / Zen 的 DeepSeek 模型（provider=opencode_go/opencode_zen，
+    页面已按 Off-Peak/Peak 两档标价）复用 deepseek 官方峰谷规则。
 
     若规则声明了 effective_from（峰谷生效时刻），生效前一律返回 (None, None)，
     避免对「生效前固定价」误乘折扣。
     """
     rules = load_rules()
     prov = rules.get(provider)
+    if not prov and family:
+        prov = rules.get(family)
     if not prov:
         return None, None
     now = now_utc or datetime.now(timezone.utc)
@@ -102,24 +109,45 @@ def apply_offpeak_live(route, now_utc: datetime | None = None):
     - cache_read/cache_write 未存 raw 基准：若入库时应用过折扣（行内
       is_offpeak=True），先除回基准价，再按当前时段重算
     - 无峰谷规则的 provider 只同步 is_offpeak 状态后跳过
+    - subscription 路线（如 OpenCode Go 的 DeepSeek）：峰谷作用在标价后
+      再除以额度倍率得到等效价；保留 quota 标签（不覆盖 discount_type）
+    - 只有标记了 offpeak_enabled 的行才按 family 回退峰谷规则（如
+      OpenCode Go/Zen/OpenRouter 的 DeepSeek 峰谷档），避免同族无峰谷
+      的模型（如 OpenRouter 的 DeepSeek Flash 固定价）被误应用
     """
-    off, mult = offpeak_status(route.provider, now_utc)
+    family = route.family if route.offpeak_enabled else None
+    off, mult = offpeak_status(route.provider, now_utc, family=family)
     was_off = route.is_offpeak  # 入库时是否谷时（DB 行状态）
     route.is_offpeak = off
     if mult is None:
         return route
     if route.raw_prompt is not None:
-        route.prompt = round(route.raw_prompt * mult, 6) if off else round(route.raw_prompt, 6)
+        base = round(route.raw_prompt * mult, 6) if off else round(route.raw_prompt, 6)
+        route.prompt = _quota_adjust(base, route)
     if route.raw_completion is not None:
-        route.completion = (
-            round(route.raw_completion * mult, 6) if off else round(route.raw_completion, 6)
+        base = (
+            round(route.raw_completion * mult, 6)
+            if off
+            else round(route.raw_completion, 6)
         )
+        route.completion = _quota_adjust(base, route)
     for attr in ("cache_read", "cache_write"):
         v = getattr(route, attr, None)
         if v is None:
             continue
         base = v / mult if was_off is True else v
         setattr(route, attr, round(base * mult, 6) if off else round(base, 6))
-    if off:
+    if off and route.discount_type != "quota":
         route.discount_type = "offpeak"
     return route
+
+
+def _quota_adjust(base: float, route) -> float:
+    """订阅路线：峰谷后的标价再除以额度倍率得到等效价；按量路线原样返回。"""
+    if (
+        route.route_type == ROUTE_SUBSCRIPTION
+        and route.quota
+        and route.quota.effective_multiplier
+    ):
+        return round(base / route.quota.effective_multiplier, 6)
+    return base

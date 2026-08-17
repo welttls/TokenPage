@@ -44,10 +44,12 @@ class RouteQuote:
     route_type: str
     prompt: float | None            # 有效输入价
     completion: float | None        # 有效输出价
+    family: str = ""                # 模型族（供峰谷规则按族回退，如 opencode_go/zen 的 deepseek）
     cache_read: float | None = None
     cache_write: float | None = None
     tiered: bool | None = None
     is_offpeak: bool | None = None
+    offpeak_enabled: bool = False    # 该行是否有峰谷计价（DeepSeek 官方/Go/Zen/OpenRouter 峰谷档）
     discount_type: str | None = None
     quota: QuotaInfo | None = None
     zdr: ZdrInfo | None = None
@@ -138,10 +140,12 @@ def _to_route(row: dict) -> RouteQuote:
         route_type=row.get("route_type", "metered"),
         prompt=effective_prompt(pseudo),
         completion=effective_completion(pseudo),
+        family=row.get("family", ""),
         cache_read=row.get("cache_read_usd"),
         cache_write=row.get("cache_write_usd"),
         tiered=row.get("tiered"),
         is_offpeak=row.get("is_offpeak"),
+        offpeak_enabled=bool(row.get("offpeak_enabled")),
         discount_type=row.get("discount_type"),
         quota=quota,
         zdr=zdr,

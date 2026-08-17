@@ -90,6 +90,7 @@ class PriceQuote:
     raw_completion: float | None = None
     offpeak_multiplier: float | None = None  # 谷时折扣倍率（None=无折扣）
     is_offpeak: bool | None = None           # 当前是否谷时
+    offpeak_enabled: bool = False            # 该行是否有峰谷计价（如 DeepSeek 官方/Go/Zen/OpenRouter 峰谷档）
     discount_type: str | None = None         # 折扣类型（offpeak/quota/free/promo）
     quota: QuotaInfo | None = None           # 订阅额度信息（subscription 路线）
     zdr: ZdrInfo | None = None               # ZDR 信息

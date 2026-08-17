@@ -43,6 +43,12 @@ def _build_quote(m: dict, mid: str, lm: str, fam: str) -> PriceQuote | None:
     completion = completion_per_token * 1_000_000
     cache_read = cache_read_per_token * 1_000_000 if cache_read_per_token > 0 else None
     cache_write = cache_write_per_token * 1_000_000 if cache_write_per_token > 0 else None
+    # 峰谷计价（overrides）：OpenRouter 对部分模型（如 DeepSeek V4 Pro）按
+    # 时段返回不同价（utc_start/utc_end 为分钟数）。基础价即 Peak 基准价，
+    # 标记 offpeak_enabled 后由 pricing.apply_offpeak_live 按当前时段实时折算
+    #（谷时半价），与 DeepSeek 官方 / Go / Zen 的峰谷档保持一致。
+    overrides = pricing.get("overrides") or []
+    offpeak_enabled = bool(overrides)
     params = set(m.get("supported_parameters") or [])
     # top_provider 为对象；兼容未来字段形态（tiered 布尔或字符串）
     tp = m.get("top_provider")
@@ -67,6 +73,7 @@ def _build_quote(m: dict, mid: str, lm: str, fam: str) -> PriceQuote | None:
         currency="USD",
         raw_prompt=round(prompt, 6),
         raw_completion=round(completion, 6),
+        offpeak_enabled=offpeak_enabled,
     )
 
 

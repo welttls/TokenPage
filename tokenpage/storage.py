@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS prices (
     cache_write_usd REAL,
     tiered INTEGER,
     is_offpeak INTEGER,
+    offpeak_enabled INTEGER,
     discount_type TEXT,
     quota_json TEXT,
     zdr_json TEXT,
@@ -49,7 +50,7 @@ CREATE TABLE IF NOT EXISTS meta (
 _COLS = (
     "fetched_at", "provider", "model_id", "route_type", "family", "tier",
     "prompt_usd", "completion_usd", "cache_read_usd", "cache_write_usd",
-    "tiered", "is_offpeak", "discount_type", "quota_json", "zdr_json",
+    "tiered", "is_offpeak", "offpeak_enabled", "discount_type", "quota_json", "zdr_json",
     "deal_tag", "currency", "raw_prompt", "raw_completion",
     "context_length", "supports_tools",
 )
@@ -57,7 +58,7 @@ _COLS = (
 _READ_KEYS = (
     "fetched_at", "provider", "model_id", "route_type", "family", "tier",
     "prompt_usd", "completion_usd", "cache_read_usd", "cache_write_usd",
-    "tiered", "is_offpeak", "discount_type", "quota_json", "zdr_json",
+    "tiered", "is_offpeak", "offpeak_enabled", "discount_type", "quota_json", "zdr_json",
     "deal_tag", "currency", "raw_prompt", "raw_completion",
     "context_length", "supports_tools",
 )
@@ -79,7 +80,17 @@ def get_conn() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.executescript(SCHEMA)
+    # 轻量迁移：旧库补新增列（CREATE TABLE IF NOT EXISTS 不会改已存在的表）
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """为旧版数据库补齐新增列（幂等）。"""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(prices)")}
+    if "offpeak_enabled" not in cols:
+        conn.execute("ALTER TABLE prices ADD COLUMN offpeak_enabled INTEGER")
+        conn.commit()
 
 
 def save_quotes(quotes: list) -> None:
@@ -102,6 +113,7 @@ def save_quotes(quotes: list) -> None:
                     _b2i(q.tiered),
                     # 谷时=1 / 峰时=0 / 无规则=NULL（保留三态语义）
                     1 if q.is_offpeak is True else (0 if q.is_offpeak is False else None),
+                    _b2i(q.offpeak_enabled),
                     q.discount_type,
                     json.dumps(q.quota.__dict__, ensure_ascii=False) if q.quota else None,
                     json.dumps(q.zdr.__dict__, ensure_ascii=False) if q.zdr else None,
@@ -170,6 +182,7 @@ def set_meta(key: str, value: str) -> None:
 def _row_to_dict(r) -> dict:
     d = dict(zip(_READ_KEYS, r))
     d["is_offpeak"] = None if d["is_offpeak"] is None else bool(d["is_offpeak"])
+    d["offpeak_enabled"] = bool(d["offpeak_enabled"])
     d["tiered"] = None if d["tiered"] is None else bool(d["tiered"])
     d["supports_tools"] = None if d["supports_tools"] is None else bool(d["supports_tools"])
     d["quota"] = json.loads(d.pop("quota_json")) if d.get("quota_json") else None

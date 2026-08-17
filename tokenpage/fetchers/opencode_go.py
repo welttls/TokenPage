@@ -196,23 +196,38 @@ def fetch() -> list[PriceQuote]:
     else:
         log.warning("OpenCode Go 文档解析异常：未找到 ZDR 表（tables=%d）", len(tables))
 
-    # ---- 合并价格行（处理阶梯价格）----
+    # ---- 合并价格行（处理阶梯价格 / 峰谷两档）----
+    # 阶梯：名字含 (≤... / (>... 说明是同一模型分档（如 GPT 5.6 Luna ≤272K / >272K）
+    # 峰谷：名字含 (Off-Peak) / (Peak) 是 DeepSeek 官方峰谷两档（8/16 生效），
+    #       不是阶梯——合并成一行取 Peak 价作基准，由 pricing.apply_offpeak_live
+    #       按当前时段实时折算（谷时半价），不打「阶梯」标签
     merged: dict[str, dict] = {}
     for row in price_rows:
         name = row["name"]
-        # 阶梯标记：名字含 (≤... / (>... 说明是同一模型分档
+        is_peak = bool(re.search(r"\(Peak\)\s*$", name, re.I))
+        is_offpeak = bool(re.search(r"\(Off-Peak\)\s*$", name, re.I))
         base_name = re.sub(r"\s*[<(（].*", "", name).strip()
         if base_name in name_to_id:
             name = base_name
         if name in merged:
-            merged[name]["tiered"] = True
-            # 用更贵的档作为展示价（保守），保留缓存等
             cur = merged[name]
-            for k in ("prompt", "completion", "cache_read", "cache_write"):
-                if row.get(k) and (cur.get(k) is None or row[k] > cur[k]):
-                    cur[k] = row[k]
+            if is_peak:
+                # 峰谷 Peak 档：作为基准价覆盖（不打阶梯）
+                cur["_offpeak"] = True
+                for k in ("prompt", "completion", "cache_read", "cache_write"):
+                    if row.get(k) is not None:
+                        cur[k] = row[k]
+            elif is_offpeak:
+                # 峰谷 Off-Peak 档：标记峰谷，忽略（Peak 档会覆盖；无 Peak 档时保留首行）
+                cur["_offpeak"] = True
+            else:
+                # 真正的阶梯分档：标记阶梯，用更贵的档作为展示价（保守）
+                cur["tiered"] = True
+                for k in ("prompt", "completion", "cache_read", "cache_write"):
+                    if row.get(k) and (cur.get(k) is None or row[k] > cur[k]):
+                        cur[k] = row[k]
         else:
-            merged[name] = {**row, "tiered": False}
+            merged[name] = {**row, "tiered": False, "_offpeak": is_peak or is_offpeak}
 
     quotes: list[PriceQuote] = []
     skipped_names: list[str] = []
@@ -266,6 +281,7 @@ def fetch() -> list[PriceQuote]:
             currency="USD",
             raw_prompt=row["prompt"],
             raw_completion=row["completion"],
+            offpeak_enabled=bool(row.get("_offpeak")),
             quota=quota,
             zdr=ZdrInfo(**zdr),
             discount_type="quota",

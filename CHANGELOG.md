@@ -2,6 +2,24 @@
 
 本文件记录 Token黄页 (TokenPage) 的版本更新。
 
+## v0.5.3（2026-08-17）
+
+### 修复
+- **OpenCode Zen 误报 DeepSeek「下架」**：DeepSeek 官方峰谷计价（8/16 生效）后，Zen 页面把 DeepSeek V4 Flash/Pro 拆成 `(Off-Peak)` / `(Peak)` 两行，`opencode_zen.py` 用展示名精确匹配价格表失败 → 整行丢失 → diff 误报 ❌ 下架。改为价格表行名去掉 `(Off-Peak)`/`(Peak)` 后缀归并、取 Peak 档作基准价，DeepSeek 行恢复正常
+- **OpenCode Go 把 Off-Peak/Peak 误判为「阶梯」**：Go 页面同样把 DeepSeek 拆成峰谷两行，`opencode_go.py` 的合并逻辑把两行当阶梯分档、取更贵 Peak 价并打「阶梯」标签。改为识别 `(Peak)`/`(Off-Peak)` 后缀：Peak 档作基准价、不打阶梯标签
+- **OpenRouter 不解析 overrides 峰谷**：OpenRouter API 对 DeepSeek V4 Pro 返回 `pricing.overrides`（峰谷时段价），`openrouter.py` 只读基础价 → 谷时也显示峰价。改为检测 `overrides` 标记 `offpeak_enabled`，由实时峰谷按当前时段折算
+
+### 新增
+- **`offpeak_enabled` 峰谷标记**：`PriceQuote`/`RouteQuote` 新增字段，标记该行是否有峰谷计价（DeepSeek 官方/Go/Zen/OpenRouter 峰谷档）；`storage.py` 新增列 + `_migrate()` 幂等迁移旧库
+- **峰谷规则按模型族回退**：`offpeak_status` 支持 `family` 参数，provider 无规则时按族回退（如 opencode_go/zen/openrouter 的 DeepSeek 复用官方峰谷规则）；`apply_offpeak_live` 对订阅路线峰谷后重新折算等效价、保留额度标签
+
+### 效果
+- 四家（OpenCode Go / OpenRouter / OpenCode Zen / DeepSeek官方）DeepSeek V4 Pro 峰谷显示一致：峰时 $1.32/$3.96、谷时 $0.66/$1.98（Go 等效价按额度×1.5 折算）
+- OpenRouter 的 DeepSeek V4 Flash（固定价）不误应用峰谷
+- diff 不再误报 Zen DeepSeek 下架
+
+---
+
 ## v0.5.2（2026-08-15）
 
 ### 新增
