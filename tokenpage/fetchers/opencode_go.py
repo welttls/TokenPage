@@ -95,6 +95,14 @@ def _cell(tr, i: int) -> str:
     return cells[i].get_text(" ", strip=True)
 
 
+def _norm_name(s: str) -> str:
+    """归一化模型展示名：去空格/连字符/下划线并转小写。
+
+    用于容忍页面各表书写差异（如价格表 "MiMo V2.5" vs 模型清单表 "MiMo-V2.5"）。
+    """
+    return re.sub(r"[\s\-_]+", "", s).lower()
+
+
 def _tables(soup: BeautifulSoup) -> list:
     return soup.find_all("table")
 
@@ -201,6 +209,9 @@ def fetch() -> list[PriceQuote]:
     # 峰谷：名字含 (Off-Peak) / (Peak) 是 DeepSeek 官方峰谷两档（8/16 生效），
     #       不是阶梯——合并成一行取 Peak 价作基准，由 pricing.apply_offpeak_live
     #       按当前时段实时折算（谷时半价），不打「阶梯」标签
+    # 名称归一化：容忍各表书写差异（空格/连字符等），如价格表 "MiMo V2.5"
+    # 对应清单表 "MiMo-V2.5"，统一改用清单表展示名以便后续 name_to_id / ZDR 匹配
+    norm_to_id: dict[str, str] = {_norm_name(k): k for k in name_to_id}
     merged: dict[str, dict] = {}
     for row in price_rows:
         name = row["name"]
@@ -209,6 +220,8 @@ def fetch() -> list[PriceQuote]:
         base_name = re.sub(r"\s*[<(（].*", "", name).strip()
         if base_name in name_to_id:
             name = base_name
+        elif _norm_name(base_name) in norm_to_id:
+            name = norm_to_id[_norm_name(base_name)]
         if name in merged:
             cur = merged[name]
             if is_peak:

@@ -2,7 +2,7 @@
 
 查模型价格，上 Token 黄页。
 
-![版本](https://img.shields.io/badge/version-0.5.3-brightgreen)
+![版本](https://img.shields.io/badge/version-0.5.4-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 

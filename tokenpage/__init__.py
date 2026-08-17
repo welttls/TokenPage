@@ -6,4 +6,4 @@
 100% 本地：价格历史存 ~/.tokenpage/prices.db，零上传、零上报。
 """
 
-__version__ = "0.5.3"
+__version__ = "0.5.4"
